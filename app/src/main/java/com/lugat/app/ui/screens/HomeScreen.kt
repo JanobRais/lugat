@@ -30,8 +30,8 @@ fun HomeScreen(
     val settings by viewModel.dailySettings.collectAsState()
     val activeDictionary by viewModel.activeDictionary.collectAsState()
     
-    var wordStats by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
-    var essentialStats by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+    var wordStats by remember { mutableStateOf<Map<String, Int>?>(null) }
+    var essentialStats by remember { mutableStateOf<Map<String, Int>?>(null) }
     
     LaunchedEffect(Unit) {
         wordStats = viewModel.getWordStats()
@@ -72,10 +72,10 @@ fun HomeScreen(
         ) {
             // Daily Progress Widget
             DailyProgressWidget(
-                trilingualProgress = wordStats?.let { it.second.toFloat() / it.first } ?: 0f,
-                essentialProgress = essentialStats?.let { it.second.toFloat() / it.first } ?: 0f,
-                trilingualCount = "${wordStats?.second ?: 0}/${wordStats?.first ?: 0}",
-                essentialCount = "${essentialStats?.second ?: 0}/${essentialStats?.first ?: 0}"
+                trilingualProgress = wordStats?.let { (it["learned"] ?: 0).toFloat() / (it["total"] ?: 1) } ?: 0f,
+                essentialProgress = essentialStats?.let { (it["learned"] ?: 0).toFloat() / (it["total"] ?: 1) } ?: 0f,
+                trilingualCount = "${wordStats?.get("learned") ?: 0}/${wordStats?.get("total") ?: 0}",
+                essentialCount = "${essentialStats?.get("learned") ?: 0}/${essentialStats?.get("total") ?: 0}"
             )
             
             Spacer(modifier = Modifier.height(24.dp))
