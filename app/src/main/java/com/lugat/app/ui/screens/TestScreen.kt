@@ -48,10 +48,32 @@ fun TestScreen(
     DisposableEffect(Unit) {
         val ttsInstance = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                // Initialized
+                // Configure TTS for English and try to find a female voice
+                val result = ttsInstance.setLanguage(Locale.US)
+                if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                    // Modern Android devices have multiple voices. We try to find one that sounds female.
+                    // Usually, names containing "female" or specific indices are often female.
+                    try {
+                        val voices = ttsInstance.voices
+                        if (voices != null) {
+                            val femaleVoice = voices.find { 
+                                it.name.lowercase().contains("female") || 
+                                it.name.lowercase().contains("network-f") 
+                            }
+                            if (femaleVoice != null) {
+                                ttsInstance.voice = femaleVoice
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
+                    // Adjust pitch and rate for a clearer, more feminine sound if needed
+                    ttsInstance.setPitch(1.1f) // Slightly higher pitch
+                    ttsInstance.setSpeechRate(0.9f) // Slightly slower for clarity
+                }
             }
         }
-        ttsInstance.language = Locale.ENGLISH
         tts = ttsInstance
         onDispose {
             ttsInstance.stop()

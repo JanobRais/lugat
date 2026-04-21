@@ -42,10 +42,27 @@ fun LearningScreen(
     DisposableEffect(Unit) {
         val ttsInstance = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                // Initialized
+                val result = ttsInstance.setLanguage(Locale.US)
+                if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
+                    try {
+                        val voices = ttsInstance.voices
+                        if (voices != null) {
+                            val femaleVoice = voices.find { 
+                                it.name.lowercase().contains("female") || 
+                                it.name.lowercase().contains("network-f") 
+                            }
+                            if (femaleVoice != null) {
+                                ttsInstance.voice = femaleVoice
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    ttsInstance.setPitch(1.1f) 
+                    ttsInstance.setSpeechRate(0.9f)
+                }
             }
         }
-        ttsInstance.language = Locale.ENGLISH
         tts = ttsInstance
         onDispose {
             ttsInstance.stop()
