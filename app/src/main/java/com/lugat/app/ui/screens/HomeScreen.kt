@@ -3,6 +3,7 @@ package com.lugat.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,14 +24,21 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val settings by viewModel.dailySettings.collectAsState()
+    val activeDictionary by viewModel.activeDictionary.collectAsState()
     
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Lugat", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = androidx.compose.ui.graphics.Color(0xFFFFA500))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "${viewModel.streakCount}", fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFFFFA500))
+                        Spacer(modifier = Modifier.width(16.dp))
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
                     }
                 }
             )
@@ -56,13 +64,41 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Dictionary Switcher
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val options = listOf("Trilingual 2000", "Essential 4000")
+                val selectedIndex = if (activeDictionary == "essential_4000") 1 else 0
+                
+                options.forEachIndexed { index, title ->
+                    SegmentedButton(
+                        selected = selectedIndex == index,
+                        onClick = {
+                            viewModel.switchDictionary(if (index == 0) "trilingual_2000" else "essential_4000")
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                    ) {
+                        Text(text = title)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
 
-            ActionCard(
-                title = "Learn New Words",
-                subtitle = "${settings.first} words today",
-                onClick = onNavigateToLearn
-            )
+            if (activeDictionary == "essential_4000") {
+                ActionCard(
+                    title = "Learn Essential Units",
+                    subtitle = "Select a unit to study",
+                    onClick = onNavigateToLearn
+                )
+            } else {
+                ActionCard(
+                    title = "Learn New Words",
+                    subtitle = "${settings.first} words today",
+                    onClick = onNavigateToLearn
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             ActionCard(
                 title = "Daily Test",

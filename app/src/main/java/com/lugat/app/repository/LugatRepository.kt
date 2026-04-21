@@ -32,6 +32,18 @@ class LugatRepository(
         }
         set(value) = sharedPreferences.edit().putString("language_direction", value.name).apply()
 
+    var activeDictionaryType: String
+        get() = sharedPreferences.getString("active_dictionary", "trilingual_2000") ?: "trilingual_2000"
+        set(value) = sharedPreferences.edit().putString("active_dictionary", value).apply()
+
+    var lastLoginDate: String
+        get() = sharedPreferences.getString("last_login_date", "") ?: ""
+        set(value) = sharedPreferences.edit().putString("last_login_date", value).apply()
+
+    var streakCount: Int
+        get() = sharedPreferences.getInt("streak_count", 0)
+        set(value) = sharedPreferences.edit().putInt("streak_count", value).apply()
+
     suspend fun checkAndPopulateDatabase() = withContext(Dispatchers.IO) {
         if (dao.getWordCount() == 0) {
             val words = mutableListOf<Word>()
@@ -68,6 +80,44 @@ class LugatRepository(
         }
     }
 
+    suspend fun checkAndPopulateEssentialDatabase() = withContext(Dispatchers.IO) {
+        if (dao.getEssentialWordCount() == 0) {
+            val words = mutableListOf<com.lugat.app.data.entity.EssentialWord>()
+            try {
+                val inputStream = context.assets.open("essential_4000.csv")
+                val reader = BufferedReader(InputStreamReader(inputStream))
+                
+                // Skip header: Essential,Unit,English,Uzbek
+                reader.readLine()
+                
+                var idCounter = 1
+                var line: String? = reader.readLine()
+                while (line != null) {
+                    val parts = line.split(",")
+                    if (parts.size >= 4) {
+                        try {
+                            val book = parts[0].trim()
+                            val unit = parts[1].trim()
+                            val en = parts[2].trim()
+                            val uz = parts[3].trim()
+                            words.add(com.lugat.app.data.entity.EssentialWord(idCounter, book, unit, en, uz))
+                            idCounter++
+                        } catch (e: Exception) {
+                            // ignore malformed line
+                        }
+                    }
+                    line = reader.readLine()
+                }
+                reader.close()
+                if (words.isNotEmpty()) {
+                    dao.insertEssentialWords(words)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     suspend fun getDailyWords(): List<Word> = withContext(Dispatchers.IO) {
         dao.getNewWords(dailyWordLimit)
     }
@@ -97,5 +147,52 @@ class LugatRepository(
 
     suspend fun getRandomOptions(excludeId: Int, limit: Int): List<Word> = withContext(Dispatchers.IO) {
         dao.getRandomOptions(excludeId, limit)
+    }
+
+    // ESSENTIAL WRAPPERS
+    suspend fun getEssentialBooks(): List<String> = withContext(Dispatchers.IO) {
+        dao.getEssentialBooks()
+    }
+
+    suspend fun getEssentialUnitsForBook(book: String): List<String> = withContext(Dispatchers.IO) {
+        dao.getEssentialUnitsForBook(book)
+    }
+
+    suspend fun getEssentialWordsForUnit(book: String, unit: String): List<com.lugat.app.data.entity.EssentialWord> = withContext(Dispatchers.IO) {
+        dao.getEssentialWordsForUnit(book, unit)
+    }
+
+    suspend fun markEssentialWordsAsLearned(words: List<com.lugat.app.data.entity.EssentialWord>) = withContext(Dispatchers.IO) {
+        val time = System.currentTimeMillis()
+        val progresses = words.map { 
+            // set next review to 1 day from now as interval start
+            com.lugat.app.data.entity.EssentialProgress(it.id, true, time, time + 86400000L, 1) 
+        }
+        dao.insertEssentialProgress(progresses)
+    }
+
+    suspend fun updateEssentialProgress(progress: com.lugat.app.data.entity.EssentialProgress) = withContext(Dispatchers.IO) {
+        dao.insertEssentialProgress(progress)
+    }
+
+    suspend fun getEssentialProgress(wordId: Int): com.lugat.app.data.entity.EssentialProgress? = withContext(Dispatchers.IO) {
+        dao.getEssentialProgress(wordId)
+    }
+
+    suspend fun getEssentialWordsDue(limit: Int): List<com.lugat.app.data.entity.EssentialWord> = withContext(Dispatchers.IO) {
+        dao.getEssentialWordsDue(System.currentTimeMillis(), limit)
+    }
+
+    suspend fun reportEssentialMistake(wordId: Int) = withContext(Dispatchers.IO) {
+        val existing = dao.getEssentialMistake(wordId)
+        if (existing != null) {
+            dao.incrementEssentialMistake(wordId)
+        } else {
+            dao.insertEssentialMistake(com.lugat.app.data.entity.EssentialMistake(wordId, 1))
+        }
+    }
+
+    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<com.lugat.app.data.entity.EssentialWord> = withContext(Dispatchers.IO) {
+        dao.getRandomEssentialOptions(excludeId, limit)
     }
 }

@@ -16,6 +16,12 @@ import com.lugat.app.data.entity.Word
 import com.lugat.app.ui.LugatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +37,10 @@ fun TestScreen(
     var options by remember { mutableStateOf<List<Word>>(emptyList()) }
     var selectedOption by remember { mutableStateOf<Word?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var isTypingMode by remember { mutableStateOf(false) }
+    var typedText by remember { mutableStateOf("") }
+    var isAnswerChecked by remember { mutableStateOf(false) }
+    var isAnswerCorrect by remember { mutableStateOf(false) }
     
     val settings by viewModel.dailySettings.collectAsState()
 
@@ -60,6 +70,9 @@ fun TestScreen(
             randomOptions.add(currentWord)
             options = randomOptions.shuffled()
             selectedOption = null
+            typedText = ""
+            isAnswerChecked = false
+            isAnswerCorrect = false
         }
     }
 
@@ -70,6 +83,15 @@ fun TestScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                actions = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Typing Mode", fontSize = 14.sp)
+                        Switch(
+                            checked = isTypingMode,
+                            onCheckedChange = { isTypingMode = it },
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
                     }
                 }
             )
@@ -108,54 +130,129 @@ fun TestScreen(
                 )
                 Spacer(modifier = Modifier.height(48.dp))
 
-                options.forEach { option ->
-                    val isSelected = selectedOption == option
-                    val isCorrect = option.id == currentWord.id
-                    
-                    val containerColor = if (selectedOption != null) {
-                        if (isCorrect) MaterialTheme.colorScheme.primaryContainer // wait, success color
-                        else if (isSelected) MaterialTheme.colorScheme.errorContainer
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    } else MaterialTheme.colorScheme.surfaceVariant
+                if (!isTypingMode) {
+                    options.forEach { option ->
+                        val isSelected = selectedOption == option
+                        val isCorrect = option.id == currentWord.id
+                        
+                        val containerColor = if (selectedOption != null) {
+                            if (isCorrect) MaterialTheme.colorScheme.primaryContainer
+                            else if (isSelected) MaterialTheme.colorScheme.errorContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        } else MaterialTheme.colorScheme.surfaceVariant
 
-                    val contentColor = if (selectedOption != null) {
-                        if (isCorrect) MaterialTheme.colorScheme.onPrimaryContainer
-                        else if (isSelected) MaterialTheme.colorScheme.onErrorContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    } else MaterialTheme.colorScheme.onSurfaceVariant
+                        val contentColor = if (selectedOption != null) {
+                            if (isCorrect) MaterialTheme.colorScheme.onPrimaryContainer
+                            else if (isSelected) MaterialTheme.colorScheme.onErrorContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        } else MaterialTheme.colorScheme.onSurfaceVariant
 
-                    Card(
-                        onClick = {
-                            if (selectedOption == null) {
-                                selectedOption = option
-                                scope.launch {
-                                    if (!isCorrect) {
-                                        viewModel.reportMistake(currentWord.id)
+                        Card(
+                            onClick = {
+                                if (selectedOption == null) {
+                                    selectedOption = option
+                                    scope.launch {
+                                        if (!isCorrect) {
+                                            viewModel.reportMistake(currentWord.id)
+                                        }
+                                        delay(1000)
+                                        if (currentIndex == questions.size - 1) {
+                                            viewModel.markSessionCompleted()
+                                            onComplete()
+                                        } else {
+                                            currentIndex++
+                                        }
                                     }
-                                    delay(1000)
-                                    if (currentIndex == questions.size - 1) {
-                                        onComplete()
-                                    } else {
-                                        currentIndex++
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .height(64.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = containerColor,
+                                contentColor = contentColor
+                            )
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = direction.getTargetText(option),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val focusManager = LocalFocusManager.current
+                    OutlinedTextField(
+                        value = typedText,
+                        onValueChange = { if (!isAnswerChecked) typedText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Type the translation") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (typedText.isNotBlank() && !isAnswerChecked) {
+                                    focusManager.clearFocus()
+                                    isAnswerChecked = true
+                                    val correctText = direction.getTargetText(currentWord)
+                                    isAnswerCorrect = typedText.trim().equals(correctText, ignoreCase = true)
+                                    
+                                    scope.launch {
+                                        if (!isAnswerCorrect) {
+                                            viewModel.reportMistake(currentWord.id)
+                                        }
+                                        delay(1500)
+                                        if (currentIndex == questions.size - 1) {
+                                            viewModel.markSessionCompleted()
+                                            onComplete()
+                                        } else {
+                                            currentIndex++
+                                        }
                                     }
                                 }
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                            .height(64.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = containerColor,
-                            contentColor = contentColor
+                        ),
+                        isError = isAnswerChecked && !isAnswerCorrect
+                    )
+                    
+                    if (isAnswerChecked) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (isAnswerCorrect) "Correct!" else "Incorrect! Answer: ${direction.getTargetText(currentWord)}",
+                            color = if (isAnswerCorrect) androidx.compose.ui.graphics.Color(0xFF4CAF50) else MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
                         )
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = direction.getTargetText(option),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                    } else {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                if (typedText.isNotBlank()) {
+                                    focusManager.clearFocus()
+                                    isAnswerChecked = true
+                                    val correctText = direction.getTargetText(currentWord)
+                                    isAnswerCorrect = typedText.trim().equals(correctText, ignoreCase = true)
+                                    
+                                    scope.launch {
+                                        if (!isAnswerCorrect) {
+                                            viewModel.reportMistake(currentWord.id)
+                                        }
+                                        delay(1500)
+                                        if (currentIndex == questions.size - 1) {
+                                            viewModel.markSessionCompleted()
+                                            onComplete()
+                                        } else {
+                                            currentIndex++
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Check")
                         }
                     }
                 }

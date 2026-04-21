@@ -25,11 +25,49 @@ class LugatViewModel @Inject constructor(
     )
     val dailySettings = _dailySettings.asStateFlow()
 
+    private val _activeDictionary = MutableStateFlow(repository.activeDictionaryType)
+    val activeDictionary = _activeDictionary.asStateFlow()
+
+    val streakCount = repository.streakCount
+
     init {
         viewModelScope.launch {
             repository.checkAndPopulateDatabase()
+            repository.checkAndPopulateEssentialDatabase()
+            
+            // Streak computation:
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val lastLogin = repository.lastLoginDate
+            if (lastLogin != today) {
+                // If it wasn't today, check if it was yesterday
+                val cal = java.util.Calendar.getInstance()
+                cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+                val yesterday = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(cal.time)
+                
+                if (lastLogin != yesterday) {
+                    // Streak broken (or first time)
+                    repository.streakCount = 0
+                }
+                
+                // We don't increment streak here immediately; we increment it when a learning session finishes.
+                // Or we can increment it when they do their first session of the day.
+            }
+            
             _isDbInitialized.value = true
         }
+    }
+
+    fun markSessionCompleted() {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        if (repository.lastLoginDate != today) {
+            repository.lastLoginDate = today
+            repository.streakCount += 1
+        }
+    }
+
+    fun switchDictionary(type: String) {
+        repository.activeDictionaryType = type
+        _activeDictionary.value = type
     }
 
     fun updateSettings(limit: Int, direction: LanguageDirection) {
@@ -50,4 +88,17 @@ class LugatViewModel @Inject constructor(
     suspend fun reportMistake(wordId: Int) = repository.reportMistake(wordId)
 
     suspend fun getRandomOptions(excludeId: Int, limit: Int): List<Word> = repository.getRandomOptions(excludeId, limit)
+
+    // Essential Methods
+    suspend fun getEssentialBooks(): List<String> = repository.getEssentialBooks()
+    suspend fun getEssentialUnitsForBook(book: String): List<String> = repository.getEssentialUnitsForBook(book)
+    suspend fun getEssentialWordsForUnit(book: String, unit: String) = repository.getEssentialWordsForUnit(book, unit)
+    suspend fun markEssentialWordsAsLearned(words: List<com.lugat.app.data.entity.EssentialWord>) = repository.markEssentialWordsAsLearned(words)
+    suspend fun updateEssentialProgress(progress: com.lugat.app.data.entity.EssentialProgress) = repository.updateEssentialProgress(progress)
+    suspend fun getEssentialProgress(wordId: Int) = repository.getEssentialProgress(wordId)
+    suspend fun getEssentialWordsDue(limit: Int) = repository.getEssentialWordsDue(limit)
+    suspend fun reportEssentialMistake(wordId: Int) = repository.reportEssentialMistake(wordId)
+    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<com.lugat.app.data.entity.EssentialWord> {
+        return repository.getRandomEssentialOptions(excludeId, limit)
+    }
 }
