@@ -18,7 +18,8 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.dailySettings.collectAsState()
     var wordLimit by remember { mutableFloatStateOf(settings.first.toFloat()) }
-    var selectedDirection by remember { mutableStateOf(settings.second) }
+    var essentialLimit by remember { mutableFloatStateOf(settings.second.toFloat()) }
+    var selectedDirection by remember { mutableStateOf(settings.third) }
     var expanded by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -27,7 +28,7 @@ fun SettingsScreen(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        viewModel.updateSettings(wordLimit.toInt(), selectedDirection)
+                        viewModel.updateSettings(wordLimit.toInt(), essentialLimit.toInt(), selectedDirection)
                         onBack()
                     }) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -47,8 +48,19 @@ fun SettingsScreen(
             Slider(
                 value = wordLimit,
                 onValueChange = { wordLimit = it },
-                valueRange = 5f..30f,
-                steps = 24
+                valueRange = 5f..40f,
+                steps = 34
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text("Essential 4000 Daily Limit: ${essentialLimit.toInt()}", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+            Slider(
+                value = essentialLimit,
+                onValueChange = { essentialLimit = it },
+                valueRange = 5f..50f,
+                steps = 44
             )
             
             Spacer(modifier = Modifier.height(32.dp))

@@ -30,6 +30,14 @@ fun HomeScreen(
     val settings by viewModel.dailySettings.collectAsState()
     val activeDictionary by viewModel.activeDictionary.collectAsState()
     
+    var wordStats by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+    var essentialStats by remember { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+    
+    LaunchedEffect(Unit) {
+        wordStats = viewModel.getWordStats()
+        essentialStats = viewModel.getEssentialStats()
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -60,18 +68,20 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Welcome to Lugat!",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+            // Daily Progress Widget
+            DailyProgressWidget(
+                trilingualProgress = wordStats?.let { it.second.toFloat() / it.first } ?: 0f,
+                essentialProgress = essentialStats?.let { it.second.toFloat() / it.first } ?: 0f,
+                trilingualCount = "${wordStats?.second ?: 0}/${wordStats?.first ?: 0}",
+                essentialCount = "${essentialStats?.second ?: 0}/${essentialStats?.first ?: 0}"
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
             Text(
-                text = "Learning ${settings.second.displayName}",
+                text = "Learning ${settings.third.displayName}",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
@@ -98,9 +108,48 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             if (activeDictionary == "essential_4000") {
+                Text(
+                    text = "Essential 4000 Menu",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.align(Alignment.Start).padding(bottom = 16.dp)
+                )
+                
+                Column {
+                    Row(Modifier.fillMaxWidth()) {
+                        SmallActionCard(
+                            title = "Daily Test",
+                            subtitle = "New words",
+                            modifier = Modifier.weight(1f).padding(end = 8.dp),
+                            onClick = onNavigateToTest
+                        )
+                        SmallActionCard(
+                            title = "Review",
+                            subtitle = "Learned",
+                            modifier = Modifier.weight(1f).padding(start = 8.dp),
+                            onClick = { /* TODO: Navigate to review learned */ onNavigateToTest() }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth()) {
+                        SmallActionCard(
+                            title = "Mistakes",
+                            subtitle = "Practice",
+                            modifier = Modifier.weight(1f).padding(end = 8.dp),
+                            onClick = onNavigateToMistakes
+                        )
+                        SmallActionCard(
+                            title = "Mixed",
+                            subtitle = "All modes",
+                            modifier = Modifier.weight(1f).padding(start = 8.dp),
+                            onClick = { /* TODO: Mixed mode */ onNavigateToTest() }
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
                 ActionCard(
-                    title = "Learn Essential Units",
-                    subtitle = "Select a unit to study",
+                    title = "Learn Units",
+                    subtitle = "Browse all books",
                     onClick = onNavigateToLearn
                 )
             } else {
@@ -109,20 +158,59 @@ fun HomeScreen(
                     subtitle = "${settings.first} words today",
                     onClick = onNavigateToLearn
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                ActionCard(
+                    title = "Daily Test",
+                    subtitle = "Test your knowledge",
+                    onClick = onNavigateToTest
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                ActionCard(
+                    title = "Review Mistakes",
+                    subtitle = "Practice words you missed",
+                    onClick = onNavigateToMistakes
+                )
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            ActionCard(
-                title = "Daily Test",
-                subtitle = "Test your knowledge",
-                onClick = onNavigateToTest
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            ActionCard(
-                title = "Review Mistakes",
-                subtitle = "Practice words you missed",
-                onClick = onNavigateToMistakes
-            )
         }
+    }
+}
+
+@Composable
+fun DailyProgressWidget(
+    trilingualProgress: Float,
+    essentialProgress: Float,
+    trilingualCount: String,
+    essentialCount: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+    ) {
+        Column(Modifier.padding(20.dp)) {
+            Text("Daily Progress", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            ProgressRow(label = "Trilingual 2000", progress = trilingualProgress, count = trilingualCount)
+            Spacer(modifier = Modifier.height(12.dp))
+            ProgressRow(label = "Essential 4000", progress = essentialProgress, count = essentialCount)
+        }
+    }
+}
+
+@Composable
+fun ProgressRow(label: String, progress: Float, count: String) {
+    Column {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(count, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = progress,
+            modifier = Modifier.fillMaxWidth().height(8.dp),
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
     }
 }
 
@@ -131,19 +219,36 @@ fun HomeScreen(
 fun ActionCard(title: String, subtitle: String, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(100.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier = Modifier.fillMaxWidth().height(90.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = subtitle, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SmallActionCard(title: String, subtitle: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(80.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(text = subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -24,6 +24,10 @@ class LugatRepository(
         get() = sharedPreferences.getInt("daily_word_limit", 15)
         set(value) = sharedPreferences.edit().putInt("daily_word_limit", value).apply()
 
+    var essentialDailyLimit: Int
+        get() = sharedPreferences.getInt("essential_daily_limit", 20)
+        set(value) = sharedPreferences.edit().putInt("essential_daily_limit", value).apply()
+
     var languageDirection: LanguageDirection
         get() {
             val name = sharedPreferences.getString("language_direction", LanguageDirection.EN_UZ.name)

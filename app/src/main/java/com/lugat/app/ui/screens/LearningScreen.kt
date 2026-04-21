@@ -40,33 +40,35 @@ fun LearningScreen(
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
 
     DisposableEffect(Unit) {
-        val ttsInstance = TextToSpeech(context) { status ->
+        var ttsInstance: TextToSpeech? = null
+        ttsInstance = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val result = ttsInstance.setLanguage(Locale.US)
+                val ttsRef = ttsInstance ?: return@TextToSpeech
+                val result = ttsRef.setLanguage(Locale.US)
                 if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
                     try {
-                        val voices = ttsInstance.voices
+                        val voices = ttsRef.voices
                         if (voices != null) {
                             val femaleVoice = voices.find { 
                                 it.name.lowercase().contains("female") || 
                                 it.name.lowercase().contains("network-f") 
                             }
                             if (femaleVoice != null) {
-                                ttsInstance.voice = femaleVoice
+                                ttsRef.voice = femaleVoice
                             }
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                    ttsInstance.setPitch(1.1f) 
-                    ttsInstance.setSpeechRate(0.9f)
+                    ttsRef.setPitch(1.1f) 
+                    ttsRef.setSpeechRate(0.9f)
                 }
             }
         }
         tts = ttsInstance
         onDispose {
-            ttsInstance.stop()
-            ttsInstance.shutdown()
+            ttsInstance?.stop()
+            ttsInstance?.shutdown()
         }
     }
 
@@ -99,7 +101,7 @@ fun LearningScreen(
             }
         } else if (currentIndex < words.size) {
             val currentWord = words[currentIndex]
-            val direction = settings.second
+            val direction = settings.third
             
             Column(
                 modifier = Modifier

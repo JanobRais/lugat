@@ -24,7 +24,7 @@ class LugatViewModel @Inject constructor(
     val isDbInitialized: StateFlow<Boolean> = _isDbInitialized.asStateFlow()
 
     private val _dailySettings = MutableStateFlow(
-        Pair(repository.dailyWordLimit, repository.languageDirection)
+        Triple(repository.dailyWordLimit, repository.essentialDailyLimit, repository.languageDirection)
     )
     val dailySettings = _dailySettings.asStateFlow()
 
@@ -73,10 +73,18 @@ class LugatViewModel @Inject constructor(
         _activeDictionary.value = type
     }
 
-    fun updateSettings(limit: Int, direction: LanguageDirection) {
+    fun updateSettings(limit: Int, essentialLimit: Int, direction: LanguageDirection) {
         repository.dailyWordLimit = limit
+        repository.essentialDailyLimit = essentialLimit
         repository.languageDirection = direction
-        _dailySettings.value = Pair(limit, direction)
+        _dailySettings.value = Triple(limit, essentialLimit, direction)
+    }
+
+    // New fetchers for Essential 4000 test modes
+    suspend fun getLearnedEssentialWords(limit: Int): List<EssentialWord> {
+        // We might need to add a DAO method for this if not present
+        // For now, let's assume we can fetch words with progress
+        return repository.getEssentialWordsDue(limit) // Placeholder or implement properly in Repo
     }
 
     // A unified logic class for Test / Learn flows
