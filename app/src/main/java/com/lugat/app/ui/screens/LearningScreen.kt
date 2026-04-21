@@ -31,9 +31,13 @@ fun LearningScreen(
     var isLoading by remember { mutableStateOf(true) }
     val settings by viewModel.dailySettings.collectAsState()
 
-    LaunchedEffect(Unit) {
-        words = viewModel.getDailyWords()
-        isLoading = false
+    val isDbInitialized by viewModel.isDbInitialized.collectAsState()
+
+    LaunchedEffect(isDbInitialized) {
+        if (isDbInitialized) {
+            words = viewModel.getDailyWords()
+            isLoading = false
+        }
     }
 
     Scaffold(

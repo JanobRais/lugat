@@ -41,16 +41,17 @@ class LugatRepository(
                 // Skip header: id,ru,uz,en
                 reader.readLine()
                 
+                var idCounter = 1
                 var line: String? = reader.readLine()
                 while (line != null) {
                     val parts = line.split(",")
-                    if (parts.size >= 4) {
+                    if (parts.size >= 3) {
                         try {
-                            val id = parts[0].trim().toInt()
-                            val ru = parts[1].trim()
-                            val uz = parts[2].trim()
-                            val en = parts[3].trim()
-                            words.add(Word(id, ru, uz, en))
+                            val ru = parts[0].trim()
+                            val uz = parts[1].trim()
+                            val en = parts[2].trim()
+                            words.add(Word(idCounter, ru, uz, en))
+                            idCounter++
                         } catch (e: Exception) {
                             // ignore malformed line
                         }

@@ -34,19 +34,23 @@ fun TestScreen(
     
     val settings by viewModel.dailySettings.collectAsState()
 
-    LaunchedEffect(Unit) {
-        val limit = settings.first
-        questions = if (mistakesOnly) {
-            viewModel.getMistakeWords(limit)
-        } else {
-            // Mixed test: New words + Mistake words + Old words
-            val mixed = mutableListOf<Word>()
-            mixed.addAll(viewModel.getDailyWords())
-            mixed.addAll(viewModel.getMistakeWords(limit / 3))
-            mixed.addAll(viewModel.getOldLearnedWords(limit / 3))
-            mixed.shuffled().take(limit)
+    val isDbInitialized by viewModel.isDbInitialized.collectAsState()
+
+    LaunchedEffect(isDbInitialized) {
+        if (isDbInitialized) {
+            val limit = settings.first
+            questions = if (mistakesOnly) {
+                viewModel.getMistakeWords(limit)
+            } else {
+                // Mixed test: New words + Mistake words + Old words
+                val mixed = mutableListOf<Word>()
+                mixed.addAll(viewModel.getDailyWords())
+                mixed.addAll(viewModel.getMistakeWords(limit / 3))
+                mixed.addAll(viewModel.getOldLearnedWords(limit / 3))
+                mixed.shuffled().take(limit)
+            }
+            isLoading = false
         }
-        isLoading = false
     }
 
     LaunchedEffect(currentIndex, questions) {
