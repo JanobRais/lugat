@@ -84,6 +84,7 @@ fun TestScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
                     }
+                },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Typing Mode", fontSize = 14.sp)
