@@ -3,7 +3,9 @@ package com.lugat.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,7 +23,9 @@ fun HomeScreen(
     onNavigateToLearn: () -> Unit,
     onNavigateToTest: () -> Unit,
     onNavigateToMistakes: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToStats: () -> Unit
 ) {
     val settings by viewModel.dailySettings.collectAsState()
     val activeDictionary by viewModel.activeDictionary.collectAsState()
@@ -32,10 +36,17 @@ fun HomeScreen(
                 title = { Text("Lugat", fontWeight = FontWeight.Bold) },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onNavigateToSearch) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                        IconButton(onClick = onNavigateToStats) {
+                            Icon(Icons.Default.BarChart, contentDescription = "Stats")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = androidx.compose.ui.graphics.Color(0xFFFFA500))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = "${viewModel.streakCount}", fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color(0xFFFFA500))
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         IconButton(onClick = onNavigateToSettings) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings")
                         }

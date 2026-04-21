@@ -14,7 +14,9 @@ import com.lugat.app.ui.LugatViewModel
 import com.lugat.app.ui.screens.FlashcardScreen
 import com.lugat.app.ui.screens.HomeScreen
 import com.lugat.app.ui.screens.LearningScreen
+import com.lugat.app.ui.screens.SearchScreen
 import com.lugat.app.ui.screens.SettingsScreen
+import com.lugat.app.ui.screens.StatsScreen
 import com.lugat.app.ui.screens.TestScreen
 import com.lugat.app.ui.screens.UnitListScreen
 import com.lugat.app.ui.theme.LugatTheme
@@ -38,7 +40,21 @@ fun LugatApp() {
                         },
                         onNavigateToTest = { navController.navigate("test_daily") },
                         onNavigateToMistakes = { navController.navigate("test_mistakes") },
-                        onNavigateToSettings = { navController.navigate("settings") }
+                        onNavigateToSettings = { navController.navigate("settings") },
+                        onNavigateToSearch = { navController.navigate("search") },
+                        onNavigateToStats = { navController.navigate("stats") }
+                    )
+                }
+                composable("search") {
+                    SearchScreen(
+                        viewModel = viewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable("stats") {
+                    StatsScreen(
+                        viewModel = viewModel,
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 composable("essential_units") {

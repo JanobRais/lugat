@@ -100,8 +100,16 @@ class LugatViewModel @Inject constructor(
     suspend fun updateEssentialProgress(progress: EssentialProgress) = repository.updateEssentialProgress(progress)
     suspend fun getEssentialProgress(wordId: Int) = repository.getEssentialProgress(wordId)
     suspend fun getEssentialWordsDue(limit: Int) = repository.getEssentialWordsDue(limit)
+    suspend fun getEssentialMistakeWords(limit: Int) = repository.getEssentialMistakeWords(limit)
     suspend fun reportEssentialMistake(wordId: Int) = repository.reportEssentialMistake(wordId)
     suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<EssentialWord> {
         return repository.getRandomEssentialOptions(excludeId, limit)
     }
+
+    // SEARCH & STATS
+    suspend fun searchWords(query: String): List<Word> = repository.searchWords(query)
+    suspend fun searchEssentialWords(query: String): List<EssentialWord> = repository.searchEssentialWords(query)
+    
+    suspend fun getWordStats() = repository.getWordStats()
+    suspend fun getEssentialStats() = repository.getEssentialStats()
 }

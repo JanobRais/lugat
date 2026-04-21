@@ -26,11 +26,11 @@ class LugatRepository(
 
     var languageDirection: LanguageDirection
         get() {
-            val name = sharedPreferences.getString("language_direction", LanguageDirection.RU_UZ.name)
+            val name = sharedPreferences.getString("language_direction", LanguageDirection.EN_UZ.name)
             return try {
                 LanguageDirection.valueOf(name!!)
             } catch (e: Exception) {
-                LanguageDirection.RU_UZ
+                LanguageDirection.EN_UZ
             }
         }
         set(value) = sharedPreferences.edit().putString("language_direction", value.name).apply()
@@ -186,6 +186,10 @@ class LugatRepository(
         dao.getEssentialWordsDue(System.currentTimeMillis(), limit)
     }
 
+    suspend fun getEssentialMistakeWords(limit: Int): List<EssentialWord> = withContext(Dispatchers.IO) {
+        dao.getEssentialMistakeWords(limit)
+    }
+
     suspend fun reportEssentialMistake(wordId: Int) = withContext(Dispatchers.IO) {
         val existing = dao.getEssentialMistake(wordId)
         if (existing != null) {
@@ -197,5 +201,30 @@ class LugatRepository(
 
     suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<EssentialWord> = withContext(Dispatchers.IO) {
         dao.getRandomEssentialOptions(excludeId, limit)
+    }
+
+    // NEW SEARCH & STATS WRAPPERS
+    suspend fun searchWords(query: String): List<Word> = withContext(Dispatchers.IO) {
+        dao.searchWords(query)
+    }
+
+    suspend fun searchEssentialWords(query: String): List<EssentialWord> = withContext(Dispatchers.IO) {
+        dao.searchEssentialWords(query)
+    }
+
+    suspend fun getWordStats(): Map<String, Int> = withContext(Dispatchers.IO) {
+        mapOf(
+            "total" to dao.getWordCount(),
+            "learned" to dao.getLearnedWordCount(),
+            "mistakes" to dao.getTotalMistakeCount()
+        )
+    }
+
+    suspend fun getEssentialStats(): Map<String, Int> = withContext(Dispatchers.IO) {
+        mapOf(
+            "total" to dao.getEssentialWordCount(),
+            "learned" to dao.getLearnedEssentialWordCount(),
+            "mistakes" to dao.getTotalEssentialMistakeCount()
+        )
     }
 }

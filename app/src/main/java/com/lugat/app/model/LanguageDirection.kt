@@ -3,12 +3,12 @@ package com.lugat.app.model
 import com.lugat.app.data.entity.Word
 
 enum class LanguageDirection(val displayName: String) {
+    EN_UZ("English → Uzbek"),
+    EN_RU("English → Russian"),
     RU_UZ("Russian → Uzbek"),
     UZ_RU("Uzbek → Russian"),
-    EN_RU("English → Russian"),
     RU_EN("Russian → English"),
-    UZ_EN("Uzbek → English"),
-    EN_UZ("English → Uzbek");
+    UZ_EN("Uzbek → English");
 
     fun getSourceText(word: Word): String {
         return when (this) {

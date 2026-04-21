@@ -16,22 +16,38 @@ import androidx.compose.ui.unit.sp
 import com.lugat.app.data.entity.Word
 import com.lugat.app.ui.LugatViewModel
 import kotlinx.coroutines.launch
+import android.speech.tts.TextToSpeech
+import androidx.compose.ui.platform.LocalContext
+import java.util.Locale
+import androidx.compose.material.icons.filled.VolumeUp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LearningScreen(
-    viewModel: LugatViewModel,
-    onBack: () -> Unit,
     onComplete: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var words by remember { mutableStateOf<List<Word>>(emptyList()) }
     var currentIndex by remember { mutableStateOf(0) }
-    var showTranslation by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     val settings by viewModel.dailySettings.collectAsState()
-
     val isDbInitialized by viewModel.isDbInitialized.collectAsState()
+
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(Unit) {
+        val ttsInstance = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                // Initialized
+            }
+        }
+        ttsInstance.language = Locale.ENGLISH
+        tts = ttsInstance
+        onDispose {
+            ttsInstance.stop()
+            ttsInstance.shutdown()
+        }
+    }
 
     LaunchedEffect(isDbInitialized) {
         if (isDbInitialized) {
@@ -73,37 +89,44 @@ fun LearningScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text("${currentIndex + 1} / ${words.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .clickable { showTranslation = !showTranslation },
+                    modifier = Modifier.fillMaxWidth().height(280.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(4.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = direction.getSourceText(currentWord),
-                                fontSize = 36.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            AnimatedVisibility(visible = showTranslation) {
-                                Text(
-                                    text = direction.getTargetText(currentWord),
-                                    fontSize = 28.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            if (!showTranslation) {
-                                Text("Tap to reveal", fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f))
-                            }
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = {
+                            tts?.speak(currentWord.en, TextToSpeech.QUEUE_FLUSH, null, null)
+                        }) {
+                            Icon(Icons.Default.VolumeUp, contentDescription = "Speak", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                         }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = direction.getSourceText(currentWord),
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Divider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                        
+                        Text(
+                            text = direction.getTargetText(currentWord),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
 
@@ -117,7 +140,6 @@ fun LearningScreen(
                             }
                         } else {
                             currentIndex++
-                            showTranslation = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp)

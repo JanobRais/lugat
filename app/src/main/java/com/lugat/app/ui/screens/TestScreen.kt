@@ -3,6 +3,7 @@ package com.lugat.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,9 @@ import com.lugat.app.data.entity.Word
 import com.lugat.app.ui.LugatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.speech.tts.TextToSpeech
+import androidx.compose.ui.platform.LocalContext
+import java.util.Locale
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -31,12 +35,29 @@ fun TestScreen(
     onBack: () -> Unit,
     onComplete: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var questions by remember { mutableStateOf<List<Word>>(emptyList()) }
+    var questions by remember { mutableStateOf<List<Any>>(emptyList()) }
     var currentIndex by remember { mutableStateOf(0) }
-    var options by remember { mutableStateOf<List<Word>>(emptyList()) }
-    var selectedOption by remember { mutableStateOf<Word?>(null) }
+    var options by remember { mutableStateOf<List<Any>>(emptyList()) }
+    var selectedOption by remember { mutableStateOf<Any?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(Unit) {
+        val ttsInstance = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                // Initialized
+            }
+        }
+        ttsInstance.language = Locale.ENGLISH
+        tts = ttsInstance
+        onDispose {
+            ttsInstance.stop()
+            ttsInstance.shutdown()
+        }
+    }
     var isTypingMode by remember { mutableStateOf(false) }
     var typedText by remember { mutableStateOf("") }
     var isAnswerChecked by remember { mutableStateOf(false) }
@@ -45,19 +66,27 @@ fun TestScreen(
     val settings by viewModel.dailySettings.collectAsState()
 
     val isDbInitialized by viewModel.isDbInitialized.collectAsState()
+    val activeDictionary by viewModel.activeDictionary.collectAsState()
 
     LaunchedEffect(isDbInitialized) {
         if (isDbInitialized) {
             val limit = settings.first
-            questions = if (mistakesOnly) {
-                viewModel.getMistakeWords(limit)
+            if (activeDictionary == "essential_4000") {
+                questions = if (mistakesOnly) {
+                    viewModel.getEssentialMistakeWords(limit)
+                } else {
+                    viewModel.getEssentialWordsDue(limit)
+                }
             } else {
-                // Mixed test: New words + Mistake words + Old words
-                val mixed = mutableListOf<Word>()
-                mixed.addAll(viewModel.getDailyWords())
-                mixed.addAll(viewModel.getMistakeWords(limit / 3))
-                mixed.addAll(viewModel.getOldLearnedWords(limit / 3))
-                mixed.shuffled().take(limit)
+                questions = if (mistakesOnly) {
+                    viewModel.getMistakeWords(limit)
+                } else {
+                    val mixed = mutableListOf<Word>()
+                    mixed.addAll(viewModel.getDailyWords())
+                    mixed.addAll(viewModel.getMistakeWords(limit / 3))
+                    mixed.addAll(viewModel.getOldLearnedWords(limit / 3))
+                    mixed.shuffled().take(limit)
+                }
             }
             isLoading = false
         }
@@ -66,9 +95,15 @@ fun TestScreen(
     LaunchedEffect(currentIndex, questions) {
         if (currentIndex < questions.size) {
             val currentWord = questions[currentIndex]
-            val randomOptions = viewModel.getRandomOptions(currentWord.id, 3).toMutableList()
-            randomOptions.add(currentWord)
-            options = randomOptions.shuffled()
+            if (currentWord is com.lugat.app.data.entity.EssentialWord) {
+                val randomOptions = viewModel.getRandomEssentialOptions(currentWord.id, 3).toMutableList()
+                randomOptions.add(currentWord)
+                options = randomOptions.shuffled()
+            } else if (currentWord is Word) {
+                val randomOptions = viewModel.getRandomOptions(currentWord.id, 3).toMutableList()
+                randomOptions.add(currentWord)
+                options = randomOptions.shuffled()
+            }
             selectedOption = null
             typedText = ""
             isAnswerChecked = false
@@ -121,10 +156,35 @@ fun TestScreen(
                     text = "${currentIndex + 1} / ${questions.size}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // TTS Speaker Icon
+                IconButton(onClick = {
+                    val textToSpeak = when (val word = questions[currentIndex]) {
+                        is com.lugat.app.data.entity.EssentialWord -> word.en
+                        is Word -> word.en
+                        else -> ""
+                    }
+                    tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
+                }) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.filled.VolumeUp,
+                        contentDescription = "Speak",
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val sourceText = when (val word = currentWord) {
+                    is com.lugat.app.data.entity.EssentialWord -> word.en // Essential always En->Uz
+                    is Word -> direction.getSourceText(word)
+                    else -> ""
+                }
 
                 Text(
-                    text = direction.getSourceText(currentWord),
+                    text = sourceText,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -134,7 +194,11 @@ fun TestScreen(
                 if (!isTypingMode) {
                     options.forEach { option ->
                         val isSelected = selectedOption == option
-                        val isCorrect = option.id == currentWord.id
+                        val isCorrect = when {
+                            currentWord is com.lugat.app.data.entity.EssentialWord && option is com.lugat.app.data.entity.EssentialWord -> option.id == currentWord.id
+                            currentWord is Word && option is Word -> option.id == currentWord.id
+                            else -> false
+                        }
                         
                         val containerColor = if (selectedOption != null) {
                             if (isCorrect) MaterialTheme.colorScheme.primaryContainer
@@ -148,13 +212,20 @@ fun TestScreen(
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         } else MaterialTheme.colorScheme.onSurfaceVariant
 
+                        val targetText = when (option) {
+                            is com.lugat.app.data.entity.EssentialWord -> option.uz
+                            is Word -> direction.getTargetText(option)
+                            else -> ""
+                        }
+
                         Card(
                             onClick = {
                                 if (selectedOption == null) {
                                     selectedOption = option
                                     scope.launch {
                                         if (!isCorrect) {
-                                            viewModel.reportMistake(currentWord.id)
+                                            if (currentWord is com.lugat.app.data.entity.EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
+                                            else if (currentWord is Word) viewModel.reportMistake(currentWord.id)
                                         }
                                         delay(1000)
                                         if (currentIndex == questions.size - 1) {
@@ -168,8 +239,8 @@ fun TestScreen(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .height(64.dp),
+                                .padding(vertical = 4.dp)
+                                .height(56.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = containerColor,
                                 contentColor = contentColor
@@ -177,7 +248,7 @@ fun TestScreen(
                         ) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text(
-                                    text = direction.getTargetText(option),
+                                    text = targetText,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -186,6 +257,12 @@ fun TestScreen(
                     }
                 } else {
                     val focusManager = LocalFocusManager.current
+                    val correctText = when (currentWord) {
+                        is com.lugat.app.data.entity.EssentialWord -> currentWord.uz
+                        is Word -> direction.getTargetText(currentWord)
+                        else -> ""
+                    }
+                    
                     OutlinedTextField(
                         value = typedText,
                         onValueChange = { if (!isAnswerChecked) typedText = it },
@@ -198,12 +275,12 @@ fun TestScreen(
                                 if (typedText.isNotBlank() && !isAnswerChecked) {
                                     focusManager.clearFocus()
                                     isAnswerChecked = true
-                                    val correctText = direction.getTargetText(currentWord)
                                     isAnswerCorrect = typedText.trim().equals(correctText, ignoreCase = true)
                                     
                                     scope.launch {
                                         if (!isAnswerCorrect) {
-                                            viewModel.reportMistake(currentWord.id)
+                                            if (currentWord is com.lugat.app.data.entity.EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
+                                            else if (currentWord is Word) viewModel.reportMistake(currentWord.id)
                                         }
                                         delay(1500)
                                         if (currentIndex == questions.size - 1) {
@@ -222,7 +299,7 @@ fun TestScreen(
                     if (isAnswerChecked) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = if (isAnswerCorrect) "Correct!" else "Incorrect! Answer: ${direction.getTargetText(currentWord)}",
+                            text = if (isAnswerCorrect) "Correct!" else "Incorrect! Answer: $correctText",
                             color = if (isAnswerCorrect) androidx.compose.ui.graphics.Color(0xFF4CAF50) else MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -234,12 +311,12 @@ fun TestScreen(
                                 if (typedText.isNotBlank()) {
                                     focusManager.clearFocus()
                                     isAnswerChecked = true
-                                    val correctText = direction.getTargetText(currentWord)
                                     isAnswerCorrect = typedText.trim().equals(correctText, ignoreCase = true)
                                     
                                     scope.launch {
                                         if (!isAnswerCorrect) {
-                                            viewModel.reportMistake(currentWord.id)
+                                            if (currentWord is com.lugat.app.data.entity.EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
+                                            else if (currentWord is Word) viewModel.reportMistake(currentWord.id)
                                         }
                                         delay(1500)
                                         if (currentIndex == questions.size - 1) {

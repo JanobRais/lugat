@@ -66,6 +66,23 @@ interface LugatDao {
     @Query("SELECT * FROM words WHERE id != :excludeId ORDER BY RANDOM() LIMIT :limit")
     suspend fun getRandomOptions(excludeId: Int, limit: Int): List<Word>
 
+    // STATS
+    @Query("SELECT COUNT(*) FROM progress")
+    suspend fun getLearnedWordCount(): Int
+
+    @Query("SELECT COUNT(*) FROM mistakes")
+    suspend fun getTotalMistakeCount(): Int
+
+    // SEARCH
+    @Query("""
+        SELECT * FROM words 
+        WHERE ru LIKE '%' || :query || '%' 
+        OR uz LIKE '%' || :query || '%' 
+        OR en LIKE '%' || :query || '%'
+        LIMIT 50
+    """)
+    suspend fun searchWords(query: String): List<Word>
+
     // ----------------------------------------------------
     // ESSENTIAL 4000
     // ----------------------------------------------------
@@ -118,4 +135,28 @@ interface LugatDao {
         ORDER BY p.nextReviewDate ASC LIMIT :limit
     """)
     suspend fun getEssentialWordsDue(currentTime: Long, limit: Int): List<EssentialWord>
+
+    @Query("""
+        SELECT w.* FROM essential_words w
+        INNER JOIN essential_mistakes m ON w.id = m.wordId
+        WHERE m.mistakeCount > 0
+        ORDER BY RANDOM() LIMIT :limit
+    """)
+    suspend fun getEssentialMistakeWords(limit: Int): List<EssentialWord>
+
+    // STATS
+    @Query("SELECT COUNT(*) FROM essential_progress")
+    suspend fun getLearnedEssentialWordCount(): Int
+
+    @Query("SELECT COUNT(*) FROM essential_mistakes")
+    suspend fun getTotalEssentialMistakeCount(): Int
+
+    // SEARCH
+    @Query("""
+        SELECT * FROM essential_words 
+        WHERE en LIKE '%' || :query || '%' 
+        OR uz LIKE '%' || :query || '%'
+        LIMIT 50
+    """)
+    suspend fun searchEssentialWords(query: String): List<EssentialWord>
 }

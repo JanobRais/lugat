@@ -18,6 +18,10 @@ import androidx.compose.ui.unit.sp
 import com.lugat.app.data.entity.EssentialWord
 import com.lugat.app.ui.LugatViewModel
 import kotlinx.coroutines.launch
+import android.speech.tts.TextToSpeech
+import androidx.compose.ui.platform.LocalContext
+import java.util.Locale
+import androidx.compose.material.icons.filled.VolumeUp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,12 +32,28 @@ fun FlashcardScreen(
     onBack: () -> Unit,
     onComplete: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var words by remember { mutableStateOf<List<EssentialWord>>(emptyList()) }
     var currentIndex by remember { mutableStateOf(0) }
-    var isFlipped by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     val isDbInitialized by viewModel.isDbInitialized.collectAsState()
-    val scope = rememberCoroutineScope()
+    
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(Unit) {
+        val ttsInstance = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                // Initialized
+            }
+        }
+        ttsInstance.language = Locale.ENGLISH
+        tts = ttsInstance
+        onDispose {
+            ttsInstance.stop()
+            ttsInstance.shutdown()
+        }
+    }
 
     LaunchedEffect(isDbInitialized) {
         if (isDbInitialized) {
@@ -91,14 +111,45 @@ fun FlashcardScreen(
                     text = "${currentIndex + 1} / ${words.size}",
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 
-                Flashcard(
-                    front = currentWord.en,
-                    back = currentWord.uz,
-                    isFlipped = isFlipped,
-                    onClick = { isFlipped = !isFlipped }
-                )
+                Card(
+                    modifier = Modifier.fillMaxWidth().height(280.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = CardDefaults.cardElevation(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = {
+                            tts?.speak(currentWord.en, TextToSpeech.QUEUE_FLUSH, null, null)
+                        }) {
+                            Icon(Icons.Default.VolumeUp, contentDescription = "Speak", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = currentWord.en,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Divider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                        
+                        Text(
+                            text = currentWord.uz,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(48.dp))
                 
@@ -108,30 +159,30 @@ fun FlashcardScreen(
                 ) {
                     Button(
                         onClick = {
-                            // Swiped Left implicitly (Don't know)
                             scope.launch {
-                                viewModel.reportEssentialMistake(currentWord.id)
-                                isFlipped = false
+                                viewModel.markEssentialWordsAsLearned(listOf(currentWord))
                                 currentIndex++
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)),
+                        modifier = Modifier.weight(1f).height(56.dp)
                     ) {
-                        Text("Don't Know")
+                        Text("Know")
                     }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
                     
                     Button(
                         onClick = {
-                            // Swiped Right implicitly (Know)
                             scope.launch {
-                                viewModel.markEssentialWordsAsLearned(listOf(currentWord))
-                                isFlipped = false
+                                viewModel.reportEssentialMistake(currentWord.id)
                                 currentIndex++
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.weight(1f).height(56.dp)
                     ) {
-                        Text("Know")
+                        Text("Don't Know")
                     }
                 }
             }
@@ -139,51 +190,4 @@ fun FlashcardScreen(
     }
 }
 
-@Composable
-fun Flashcard(
-    front: String,
-    back: String,
-    isFlipped: Boolean,
-    onClick: () -> Unit
-) {
-    val rotation by animateFloatAsState(
-        targetValue = if (isFlipped) 180f else 0f,
-        label = "rotation"
-    )
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-            .clickable(onClick = onClick)
-            .graphicsLayer {
-                rotationY = rotation
-                cameraDistance = 12f * density
-            },
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (rotation <= 90f) {
-                Text(
-                    text = front,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-            } else {
-                Text(
-                    text = back,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.graphicsLayer { rotationY = 180f } // Fix mirror effect
-                )
-            }
-        }
-    }
-}
