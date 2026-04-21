@@ -11,10 +11,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.lugat.app.ui.LugatViewModel
+import com.lugat.app.ui.screens.FlashcardScreen
 import com.lugat.app.ui.screens.HomeScreen
 import com.lugat.app.ui.screens.LearningScreen
 import com.lugat.app.ui.screens.SettingsScreen
 import com.lugat.app.ui.screens.TestScreen
+import com.lugat.app.ui.screens.UnitListScreen
 import com.lugat.app.ui.theme.LugatTheme
 
 @Composable
@@ -40,7 +42,7 @@ fun LugatApp() {
                     )
                 }
                 composable("essential_units") {
-                    com.lugat.app.ui.screens.UnitListScreen(
+                    UnitListScreen(
                         viewModel = viewModel,
                         onUnitSelected = { book, unit -> 
                             navController.navigate("essential_learn/$book/$unit")
@@ -53,7 +55,7 @@ fun LugatApp() {
                     val unit = backStackEntry.arguments?.getString("unit") ?: ""
                     
                     // The essential learn screen is a modified learning screen or new one
-                    com.lugat.app.ui.screens.FlashcardScreen(
+                    FlashcardScreen(
                         viewModel = viewModel,
                         book = book,
                         unit = unit,

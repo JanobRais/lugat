@@ -4,6 +4,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.lugat.app.data.entity.EssentialMistake
+import com.lugat.app.data.entity.EssentialProgress
+import com.lugat.app.data.entity.EssentialWord
 import com.lugat.app.data.entity.Mistake
 import com.lugat.app.data.entity.Progress
 import com.lugat.app.data.entity.Word
@@ -68,7 +71,7 @@ interface LugatDao {
     // ----------------------------------------------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEssentialWords(words: List<com.lugat.app.data.entity.EssentialWord>)
+    suspend fun insertEssentialWords(words: List<EssentialWord>)
 
     @Query("SELECT COUNT(*) FROM essential_words")
     suspend fun getEssentialWordCount(): Int
@@ -81,31 +84,31 @@ interface LugatDao {
 
     // Get words for a given unit
     @Query("SELECT * FROM essential_words WHERE bookName = :book AND unitName = :unit ORDER BY id ASC")
-    suspend fun getEssentialWordsForUnit(book: String, unit: String): List<com.lugat.app.data.entity.EssentialWord>
+    suspend fun getEssentialWordsForUnit(book: String, unit: String): List<EssentialWord>
 
     // Mark as learned/scheduled
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEssentialProgress(progress: com.lugat.app.data.entity.EssentialProgress)
+    suspend fun insertEssentialProgress(progress: EssentialProgress)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEssentialProgress(progresses: List<com.lugat.app.data.entity.EssentialProgress>)
+    suspend fun insertEssentialProgress(progresses: List<EssentialProgress>)
 
     @Query("SELECT * FROM essential_progress WHERE wordId = :wordId")
-    suspend fun getEssentialProgress(wordId: Int): com.lugat.app.data.entity.EssentialProgress?
+    suspend fun getEssentialProgress(wordId: Int): EssentialProgress?
 
     // Mistakes tracking
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEssentialMistake(mistake: com.lugat.app.data.entity.EssentialMistake)
+    suspend fun insertEssentialMistake(mistake: EssentialMistake)
 
     @Query("SELECT * FROM essential_mistakes WHERE wordId = :wordId")
-    suspend fun getEssentialMistake(wordId: Int): com.lugat.app.data.entity.EssentialMistake?
+    suspend fun getEssentialMistake(wordId: Int): EssentialMistake?
 
     @Query("UPDATE essential_mistakes SET mistakeCount = mistakeCount + 1 WHERE wordId = :wordId")
     suspend fun incrementEssentialMistake(wordId: Int)
 
     // Option words for Essential tests
     @Query("SELECT * FROM essential_words WHERE id != :excludeId ORDER BY RANDOM() LIMIT :limit")
-    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<com.lugat.app.data.entity.EssentialWord>
+    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<EssentialWord>
 
     // Words due for review (Spaced Repetition)
     @Query("""
@@ -114,5 +117,5 @@ interface LugatDao {
         WHERE p.nextReviewDate > 0 AND p.nextReviewDate <= :currentTime
         ORDER BY p.nextReviewDate ASC LIMIT :limit
     """)
-    suspend fun getEssentialWordsDue(currentTime: Long, limit: Int): List<com.lugat.app.data.entity.EssentialWord>
+    suspend fun getEssentialWordsDue(currentTime: Long, limit: Int): List<EssentialWord>
 }

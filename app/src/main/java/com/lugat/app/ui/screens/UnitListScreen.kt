@@ -67,7 +67,7 @@ fun UnitListScreen(
                             headlineContent = { Text(book, fontWeight = FontWeight.SemiBold) },
                             modifier = Modifier.clickable { selectedBook = book }
                         )
-                        Divider()
+                        HorizontalDivider()
                     }
                 } else {
                     items(units) { unit ->
@@ -75,7 +75,7 @@ fun UnitListScreen(
                             headlineContent = { Text(unit) },
                             modifier = Modifier.clickable { onUnitSelected(selectedBook!!, unit) }
                         )
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
             }

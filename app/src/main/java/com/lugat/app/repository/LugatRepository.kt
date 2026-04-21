@@ -2,6 +2,9 @@ package com.lugat.app.repository
 
 import android.content.Context
 import com.lugat.app.data.dao.LugatDao
+import com.lugat.app.data.entity.EssentialMistake
+import com.lugat.app.data.entity.EssentialProgress
+import com.lugat.app.data.entity.EssentialWord
 import com.lugat.app.data.entity.Mistake
 import com.lugat.app.data.entity.Progress
 import com.lugat.app.data.entity.Word
@@ -82,7 +85,7 @@ class LugatRepository(
 
     suspend fun checkAndPopulateEssentialDatabase() = withContext(Dispatchers.IO) {
         if (dao.getEssentialWordCount() == 0) {
-            val words = mutableListOf<com.lugat.app.data.entity.EssentialWord>()
+            val words = mutableListOf<EssentialWord>()
             try {
                 val inputStream = context.assets.open("essential_4000.csv")
                 val reader = BufferedReader(InputStreamReader(inputStream))
@@ -100,7 +103,7 @@ class LugatRepository(
                             val unit = parts[1].trim()
                             val en = parts[2].trim()
                             val uz = parts[3].trim()
-                            words.add(com.lugat.app.data.entity.EssentialWord(idCounter, book, unit, en, uz))
+                            words.add(EssentialWord(idCounter, book, unit, en, uz))
                             idCounter++
                         } catch (e: Exception) {
                             // ignore malformed line
@@ -158,28 +161,28 @@ class LugatRepository(
         dao.getEssentialUnitsForBook(book)
     }
 
-    suspend fun getEssentialWordsForUnit(book: String, unit: String): List<com.lugat.app.data.entity.EssentialWord> = withContext(Dispatchers.IO) {
+    suspend fun getEssentialWordsForUnit(book: String, unit: String): List<EssentialWord> = withContext(Dispatchers.IO) {
         dao.getEssentialWordsForUnit(book, unit)
     }
 
-    suspend fun markEssentialWordsAsLearned(words: List<com.lugat.app.data.entity.EssentialWord>) = withContext(Dispatchers.IO) {
+    suspend fun markEssentialWordsAsLearned(words: List<EssentialWord>) = withContext(Dispatchers.IO) {
         val time = System.currentTimeMillis()
         val progresses = words.map { 
             // set next review to 1 day from now as interval start
-            com.lugat.app.data.entity.EssentialProgress(it.id, true, time, time + 86400000L, 1) 
+            EssentialProgress(it.id, true, time, time + 86400000L, 1) 
         }
         dao.insertEssentialProgress(progresses)
     }
 
-    suspend fun updateEssentialProgress(progress: com.lugat.app.data.entity.EssentialProgress) = withContext(Dispatchers.IO) {
+    suspend fun updateEssentialProgress(progress: EssentialProgress) = withContext(Dispatchers.IO) {
         dao.insertEssentialProgress(progress)
     }
 
-    suspend fun getEssentialProgress(wordId: Int): com.lugat.app.data.entity.EssentialProgress? = withContext(Dispatchers.IO) {
+    suspend fun getEssentialProgress(wordId: Int): EssentialProgress? = withContext(Dispatchers.IO) {
         dao.getEssentialProgress(wordId)
     }
 
-    suspend fun getEssentialWordsDue(limit: Int): List<com.lugat.app.data.entity.EssentialWord> = withContext(Dispatchers.IO) {
+    suspend fun getEssentialWordsDue(limit: Int): List<EssentialWord> = withContext(Dispatchers.IO) {
         dao.getEssentialWordsDue(System.currentTimeMillis(), limit)
     }
 
@@ -188,11 +191,11 @@ class LugatRepository(
         if (existing != null) {
             dao.incrementEssentialMistake(wordId)
         } else {
-            dao.insertEssentialMistake(com.lugat.app.data.entity.EssentialMistake(wordId, 1))
+            dao.insertEssentialMistake(EssentialMistake(wordId, 1))
         }
     }
 
-    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<com.lugat.app.data.entity.EssentialWord> = withContext(Dispatchers.IO) {
+    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<EssentialWord> = withContext(Dispatchers.IO) {
         dao.getRandomEssentialOptions(excludeId, limit)
     }
 }

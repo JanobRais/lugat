@@ -2,6 +2,9 @@ package com.lugat.app.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lugat.app.data.entity.EssentialMistake
+import com.lugat.app.data.entity.EssentialProgress
+import com.lugat.app.data.entity.EssentialWord
 import com.lugat.app.data.entity.Word
 import com.lugat.app.model.LanguageDirection
 import com.lugat.app.repository.LugatRepository
@@ -93,12 +96,12 @@ class LugatViewModel @Inject constructor(
     suspend fun getEssentialBooks(): List<String> = repository.getEssentialBooks()
     suspend fun getEssentialUnitsForBook(book: String): List<String> = repository.getEssentialUnitsForBook(book)
     suspend fun getEssentialWordsForUnit(book: String, unit: String) = repository.getEssentialWordsForUnit(book, unit)
-    suspend fun markEssentialWordsAsLearned(words: List<com.lugat.app.data.entity.EssentialWord>) = repository.markEssentialWordsAsLearned(words)
-    suspend fun updateEssentialProgress(progress: com.lugat.app.data.entity.EssentialProgress) = repository.updateEssentialProgress(progress)
+    suspend fun markEssentialWordsAsLearned(words: List<EssentialWord>) = repository.markEssentialWordsAsLearned(words)
+    suspend fun updateEssentialProgress(progress: EssentialProgress) = repository.updateEssentialProgress(progress)
     suspend fun getEssentialProgress(wordId: Int) = repository.getEssentialProgress(wordId)
     suspend fun getEssentialWordsDue(limit: Int) = repository.getEssentialWordsDue(limit)
     suspend fun reportEssentialMistake(wordId: Int) = repository.reportEssentialMistake(wordId)
-    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<com.lugat.app.data.entity.EssentialWord> {
+    suspend fun getRandomEssentialOptions(excludeId: Int, limit: Int): List<EssentialWord> {
         return repository.getRandomEssentialOptions(excludeId, limit)
     }
 }
