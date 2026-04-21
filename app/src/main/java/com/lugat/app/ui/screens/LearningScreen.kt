@@ -3,7 +3,9 @@ package com.lugat.app.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,10 +21,12 @@ import kotlinx.coroutines.launch
 import android.speech.tts.TextToSpeech
 import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
-import androidx.compose.material.icons.filled.VolumeUp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun LearningScreen(
+    viewModel: LugatViewModel,
+    onBack: () -> Unit,
     onComplete: () -> Unit
 ) {
     val context = LocalContext.current
@@ -105,7 +109,7 @@ import androidx.compose.material.icons.filled.VolumeUp
                         IconButton(onClick = {
                             tts?.speak(currentWord.en, TextToSpeech.QUEUE_FLUSH, null, null)
                         }) {
-                            Icon(Icons.Default.VolumeUp, contentDescription = "Speak", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Speak", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))

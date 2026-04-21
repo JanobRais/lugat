@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 import android.speech.tts.TextToSpeech
 import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,7 +127,7 @@ fun FlashcardScreen(
                         IconButton(onClick = {
                             tts?.speak(currentWord.en, TextToSpeech.QUEUE_FLUSH, null, null)
                         }) {
-                            Icon(Icons.Default.VolumeUp, contentDescription = "Speak", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Speak", modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))

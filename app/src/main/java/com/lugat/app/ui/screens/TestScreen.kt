@@ -2,8 +2,8 @@ package com.lugat.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -168,7 +168,7 @@ fun TestScreen(
                     tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, null)
                 }) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.filled.VolumeUp,
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Speak",
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.primary
