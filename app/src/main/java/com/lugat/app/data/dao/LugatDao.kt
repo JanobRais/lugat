@@ -93,10 +93,10 @@ interface LugatDao {
     @Query("SELECT COUNT(*) FROM essential_words")
     suspend fun getEssentialWordCount(): Int
 
-    @Query("SELECT DISTINCT bookName FROM essential_words ORDER BY LENGTH(bookName), bookName ASC")
+    @Query("SELECT DISTINCT bookName FROM essential_words ORDER BY CAST(SUBSTR(bookName, 11) AS INTEGER) ASC")
     suspend fun getEssentialBooks(): List<String>
 
-    @Query("SELECT DISTINCT unitName FROM essential_words WHERE bookName = :book ORDER BY LENGTH(unitName), unitName ASC")
+    @Query("SELECT DISTINCT unitName FROM essential_words WHERE bookName = :book ORDER BY CAST(SUBSTR(unitName, 6) AS INTEGER) ASC")
     suspend fun getEssentialUnitsForBook(book: String): List<String>
 
     // Get words for a given unit
