@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lugat.app.data.entity.EssentialWord
 import com.lugat.app.data.entity.Word
 import com.lugat.app.model.LanguageDirection
 import com.lugat.app.ui.LugatViewModel
@@ -193,7 +194,7 @@ fun TestScreen(
                 // TTS Speaker Icon
                 IconButton(onClick = {
                     val textToSpeak = when (val word = questions[currentIndex]) {
-                        is com.lugat.app.data.entity.EssentialWord -> word.en
+                        is EssentialWord -> word.en
                         is Word -> word.en
                         else -> ""
                     }
@@ -216,7 +217,7 @@ fun TestScreen(
                 }
 
                 val sourceText = when (val word = currentWord) {
-                    is com.lugat.app.data.entity.EssentialWord -> {
+                    is EssentialWord -> {
                         if (currentDirection == LanguageDirection.UZ_EN) word.uz else word.en
                     }
                     is Word -> currentDirection.getSourceText(word)
@@ -328,7 +329,7 @@ fun TestScreen(
                                     
                                     scope.launch {
                                         if (!isAnswerCorrect) {
-                                            if (currentWord is com.lugat.app.data.entity.EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
+                                            if (currentWord is EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
                                             else if (currentWord is Word) viewModel.reportMistake(currentWord.id)
                                         }
                                         delay(1500)
@@ -364,7 +365,7 @@ fun TestScreen(
                                     
                                     scope.launch {
                                         if (!isAnswerCorrect) {
-                                            if (currentWord is com.lugat.app.data.entity.EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
+                                            if (currentWord is EssentialWord) viewModel.reportEssentialMistake(currentWord.id)
                                             else if (currentWord is Word) viewModel.reportMistake(currentWord.id)
                                         }
                                         delay(1500)
