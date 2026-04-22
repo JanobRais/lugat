@@ -63,6 +63,9 @@ fun LugatApp() {
                         onUnitSelected = { book, unit -> 
                             navController.navigate("essential_learn/$book/$unit")
                         },
+                        onTestUnitSelected = { book, unit, direction ->
+                            navController.navigate("test_unit/$book/$unit/$direction")
+                        },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -70,11 +73,24 @@ fun LugatApp() {
                     val book = backStackEntry.arguments?.getString("book") ?: ""
                     val unit = backStackEntry.arguments?.getString("unit") ?: ""
                     
-                    // The essential learn screen is a modified learning screen or new one
                     FlashcardScreen(
                         viewModel = viewModel,
                         book = book,
                         unit = unit,
+                        onBack = { navController.popBackStack() },
+                        onComplete = { navController.popBackStack() }
+                    )
+                }
+                composable("test_unit/{book}/{unit}/{direction}") { backStackEntry ->
+                    val book = backStackEntry.arguments?.getString("book") ?: ""
+                    val unit = backStackEntry.arguments?.getString("unit") ?: ""
+                    val direction = backStackEntry.arguments?.getString("direction") ?: "EN_UZ"
+                    
+                    TestScreen(
+                        viewModel = viewModel,
+                        book = book,
+                        unit = unit,
+                        overrideDirection = direction,
                         onBack = { navController.popBackStack() },
                         onComplete = { navController.popBackStack() }
                     )

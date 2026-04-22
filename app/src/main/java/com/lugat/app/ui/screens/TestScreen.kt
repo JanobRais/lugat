@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lugat.app.data.entity.Word
+import com.lugat.app.model.LanguageDirection
 import com.lugat.app.ui.LugatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,6 +33,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 fun TestScreen(
     viewModel: LugatViewModel,
     mistakesOnly: Boolean = false,
+    book: String? = null,
+    unit: String? = null,
+    overrideDirection: String? = null,
     onBack: () -> Unit,
     onComplete: () -> Unit
 ) {
@@ -90,11 +94,20 @@ fun TestScreen(
     LaunchedEffect(isDbInitialized) {
         if (isDbInitialized) {
             val limit = settings.first
-            if (activeDictionary == "essential_4000") {
+            if (book != null && unit != null) {
+                // Unit-specific test
+                questions = viewModel.getEssentialWordsForUnit(book, unit).shuffled()
+            } else if (activeDictionary == "essential_4000") {
                 questions = if (mistakesOnly) {
                     viewModel.getEssentialMistakeWords(limit)
                 } else {
-                    viewModel.getEssentialWordsDue(limit)
+                    val due = viewModel.getEssentialWordsDue(limit)
+                    if (due.isEmpty()) {
+                        // If no words due, fetch some new words to keep user engaged
+                        viewModel.getNewEssentialWords(limit)
+                    } else {
+                        due
+                    }
                 }
             } else {
                 questions = if (mistakesOnly) {
@@ -196,9 +209,17 @@ fun TestScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val currentDirection = if (overrideDirection != null) {
+                    LanguageDirection.valueOf(overrideDirection)
+                } else {
+                    direction
+                }
+
                 val sourceText = when (val word = currentWord) {
-                    is com.lugat.app.data.entity.EssentialWord -> word.en // Essential always En->Uz
-                    is Word -> direction.getSourceText(word)
+                    is com.lugat.app.data.entity.EssentialWord -> {
+                        if (currentDirection == LanguageDirection.UZ_EN) word.uz else word.en
+                    }
+                    is Word -> currentDirection.getSourceText(word)
                     else -> ""
                 }
 
@@ -232,8 +253,10 @@ fun TestScreen(
                         } else MaterialTheme.colorScheme.onSurfaceVariant
 
                         val targetText = when (option) {
-                            is com.lugat.app.data.entity.EssentialWord -> option.uz
-                            is Word -> direction.getTargetText(option)
+                            is com.lugat.app.data.entity.EssentialWord -> {
+                                if (currentDirection == LanguageDirection.UZ_EN) option.en else option.uz
+                            }
+                            is Word -> currentDirection.getTargetText(option)
                             else -> ""
                         }
 
@@ -276,9 +299,16 @@ fun TestScreen(
                     }
                 } else {
                     val focusManager = LocalFocusManager.current
+                    val currentDirection = if (overrideDirection != null) {
+                        LanguageDirection.valueOf(overrideDirection)
+                    } else {
+                        direction
+                    }
                     val correctText = when (currentWord) {
-                        is com.lugat.app.data.entity.EssentialWord -> currentWord.uz
-                        is Word -> direction.getTargetText(currentWord)
+                        is com.lugat.app.data.entity.EssentialWord -> {
+                            if (currentDirection == LanguageDirection.UZ_EN) currentWord.en else currentWord.uz
+                        }
+                        is Word -> currentDirection.getTargetText(currentWord)
                         else -> ""
                     }
                     

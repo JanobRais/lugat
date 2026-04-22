@@ -31,6 +31,9 @@ class LugatViewModel @Inject constructor(
     private val _activeDictionary = MutableStateFlow(repository.activeDictionaryType)
     val activeDictionary = _activeDictionary.asStateFlow()
 
+    private val _selectedBook = MutableStateFlow<String?>(null)
+    val selectedBook = _selectedBook.asStateFlow()
+
     val streakCount = repository.streakCount
 
     init {
@@ -101,8 +104,13 @@ class LugatViewModel @Inject constructor(
     suspend fun getRandomOptions(excludeId: Int, limit: Int): List<Word> = repository.getRandomOptions(excludeId, limit)
 
     // Essential Methods
+    fun selectBook(book: String?) {
+        _selectedBook.value = book
+    }
+
     suspend fun getEssentialBooks(): List<String> = repository.getEssentialBooks()
     suspend fun getEssentialUnitsForBook(book: String): List<String> = repository.getEssentialUnitsForBook(book)
+    suspend fun getNewEssentialWords(limit: Int) = repository.getNewEssentialWords(limit)
     suspend fun getEssentialWordsForUnit(book: String, unit: String) = repository.getEssentialWordsForUnit(book, unit)
     suspend fun markEssentialWordsAsLearned(words: List<EssentialWord>) = repository.markEssentialWordsAsLearned(words)
     suspend fun updateEssentialProgress(progress: EssentialProgress) = repository.updateEssentialProgress(progress)

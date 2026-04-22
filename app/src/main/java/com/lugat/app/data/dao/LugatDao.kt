@@ -93,15 +93,23 @@ interface LugatDao {
     @Query("SELECT COUNT(*) FROM essential_words")
     suspend fun getEssentialWordCount(): Int
 
-    @Query("SELECT DISTINCT bookName FROM essential_words ORDER BY bookName ASC")
+    @Query("SELECT DISTINCT bookName FROM essential_words ORDER BY LENGTH(bookName), bookName ASC")
     suspend fun getEssentialBooks(): List<String>
 
-    @Query("SELECT DISTINCT unitName FROM essential_words WHERE bookName = :book ORDER BY unitName ASC")
+    @Query("SELECT DISTINCT unitName FROM essential_words WHERE bookName = :book ORDER BY LENGTH(unitName), unitName ASC")
     suspend fun getEssentialUnitsForBook(book: String): List<String>
 
     // Get words for a given unit
     @Query("SELECT * FROM essential_words WHERE bookName = :book AND unitName = :unit ORDER BY id ASC")
     suspend fun getEssentialWordsForUnit(book: String, unit: String): List<EssentialWord>
+
+    // Get N unlearned essential words
+    @Query("""
+        SELECT * FROM essential_words 
+        WHERE id NOT IN (SELECT wordId FROM essential_progress)
+        ORDER BY id ASC LIMIT :limit
+    """)
+    suspend fun getNewEssentialWords(limit: Int): List<EssentialWord>
 
     // Mark as learned/scheduled
     @Insert(onConflict = OnConflictStrategy.REPLACE)

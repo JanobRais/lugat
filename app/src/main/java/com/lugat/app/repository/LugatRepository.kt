@@ -165,6 +165,10 @@ class LugatRepository(
         dao.getEssentialUnitsForBook(book)
     }
 
+    suspend fun getNewEssentialWords(limit: Int): List<EssentialWord> = withContext(Dispatchers.IO) {
+        dao.getNewEssentialWords(limit)
+    }
+
     suspend fun getEssentialWordsForUnit(book: String, unit: String): List<EssentialWord> = withContext(Dispatchers.IO) {
         dao.getEssentialWordsForUnit(book, unit)
     }

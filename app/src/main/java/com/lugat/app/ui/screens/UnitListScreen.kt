@@ -19,12 +19,15 @@ import com.lugat.app.ui.LugatViewModel
 fun UnitListScreen(
     viewModel: LugatViewModel,
     onUnitSelected: (String, String) -> Unit,
+    onTestUnitSelected: (String, String, String) -> Unit,
     onBack: () -> Unit
 ) {
     var books by remember { mutableStateOf<List<String>>(emptyList()) }
-    var selectedBook by remember { mutableStateOf<String?>(null) }
+    val selectedBook by viewModel.selectedBook.collectAsState()
     var units by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    
+    var showTestDialog by remember { mutableStateOf<String?>(null) } // holds unit name
 
     val isDbInitialized by viewModel.isDbInitialized.collectAsState()
 
@@ -47,7 +50,7 @@ fun UnitListScreen(
                 title = { Text(if (selectedBook == null) "Select Book" else selectedBook!!) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (selectedBook != null) selectedBook = null else onBack()
+                        if (selectedBook != null) viewModel.selectBook(null) else onBack()
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
@@ -65,7 +68,7 @@ fun UnitListScreen(
                     items(books) { book ->
                         ListItem(
                             headlineContent = { Text(book, fontWeight = FontWeight.SemiBold) },
-                            modifier = Modifier.clickable { selectedBook = book }
+                            modifier = Modifier.clickable { viewModel.selectBook(book) }
                         )
                         HorizontalDivider()
                     }
@@ -73,12 +76,45 @@ fun UnitListScreen(
                     items(units) { unit ->
                         ListItem(
                             headlineContent = { Text(unit) },
-                            modifier = Modifier.clickable { onUnitSelected(selectedBook!!, unit) }
+                            modifier = Modifier.clickable { onUnitSelected(selectedBook!!, unit) },
+                            trailingContent = {
+                                Button(
+                                    onClick = { showTestDialog = unit },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Test", fontSize = 12.sp)
+                                }
+                            }
                         )
                         HorizontalDivider()
                     }
                 }
             }
         }
+    }
+
+    if (showTestDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showTestDialog = null },
+            title = { Text("Choose Direction") },
+            text = { Text("Select the test language direction for ${showTestDialog!!}") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTestUnitSelected(selectedBook!!, showTestDialog!!, "EN_UZ")
+                    showTestDialog = null
+                }) {
+                    Text("English -> Uzbek")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    onTestUnitSelected(selectedBook!!, showTestDialog!!, "UZ_EN")
+                    showTestDialog = null
+                }) {
+                    Text("Uzbek -> English")
+                }
+            }
+        )
     }
 }
