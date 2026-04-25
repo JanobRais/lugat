@@ -7,36 +7,55 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+private val DarkErrorContainer = Color(0xFF4A0000)
+
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryBlue,
-    secondary = SecondaryBlue,
-    background = BackgroundLight,
-    surface = SurfaceLight,
     onPrimary = SurfaceLight,
+    primaryContainer = CardBlueLight,
+    onPrimaryContainer = PrimaryBlueDark,
+    secondary = SecondaryBlue,
     onSecondary = SurfaceLight,
+    secondaryContainer = LightBlue,
+    onSecondaryContainer = PrimaryBlueDark,
+    background = BackgroundLight,
     onBackground = TextDark,
+    surface = SurfaceLight,
     onSurface = TextDark,
+    surfaceVariant = SurfaceVariantLight,
+    onSurfaceVariant = TextSecondary,
     error = ErrorRed,
-    errorContainer = ErrorRed.copy(alpha = 0.1f),
-    onError = SurfaceLight
+    errorContainer = ErrorContainer,
+    onError = SurfaceLight,
+    onErrorContainer = ErrorRed,
+    outline = TextSecondary
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
-    secondary = SecondaryBlue,
+    primary = SecondaryBlue,
+    onPrimary = BackgroundDark,
+    primaryContainer = CardBlueDark,
+    onPrimaryContainer = SecondaryBlue,
+    secondary = GradientMid,
+    onSecondary = BackgroundDark,
+    secondaryContainer = SurfaceVariantDark,
+    onSecondaryContainer = SecondaryBlue,
     background = BackgroundDark,
-    surface = SurfaceDark,
-    onPrimary = TextLight,
-    onSecondary = TextLight,
     onBackground = TextLight,
+    surface = SurfaceDark,
     onSurface = TextLight,
+    surfaceVariant = SurfaceVariantDark,
+    onSurfaceVariant = TextSecondaryLight,
     error = ErrorRed,
-    errorContainer = ErrorRed.copy(alpha = 0.2f),
-    onError = TextLight
+    errorContainer = DarkErrorContainer,
+    onError = TextLight,
+    onErrorContainer = ErrorRed,
+    outline = TextSecondaryLight
 )
 
 @Composable
