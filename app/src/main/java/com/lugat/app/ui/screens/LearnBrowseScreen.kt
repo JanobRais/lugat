@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -131,7 +130,8 @@ fun LearnBrowseScreen(
                         SearchSectionHeader("Essential 4000", essResults.size, Color(0xFFF9AA33))
                     }
                     items(essResults) { w ->
-                        SearchResultCard("${w.en}", w.uz, "${w.bookName} · ${w.unitName}", Color(0xFFF9AA33))
+                        SearchResultCard(primaryText = "${w.en}", secondaryText = w.uz,
+                            badgeText = "${w.bookName} · ${w.unitName}", accentColor = Color(0xFFF9AA33))
                     }
                 }
                 if (triResults.isNotEmpty()) {
@@ -140,7 +140,8 @@ fun LearnBrowseScreen(
                         SearchSectionHeader("Trilingual 2000", triResults.size, MaterialTheme.colorScheme.primary)
                     }
                     items(triResults) { w ->
-                        SearchResultCard("${w.ru} · ${w.en}", w.uz, null, MaterialTheme.colorScheme.primary)
+                        SearchResultCard(primaryText = "${w.ru} · ${w.en}", secondaryText = w.uz,
+                            badgeText = null, accentColor = MaterialTheme.colorScheme.primary)
                     }
                 }
                 if (triResults.isEmpty() && essResults.isEmpty()) {
@@ -209,7 +210,7 @@ fun LearnBrowseScreen(
                             Column {
                                 Text("Umumiy progress", fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Row(verticalAlignment = Alignment.Baseline, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text("$triLearned", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.primary)
                                     Text("/$triTotal", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -243,7 +244,7 @@ fun LearnBrowseScreen(
                                     .background(MaterialTheme.colorScheme.primary)
                             )
                             Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.Baseline, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(w.ru, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.onSurface)
                                     Text("рус", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
@@ -270,7 +271,7 @@ fun LearnBrowseScreen(
                             Column {
                                 Text("Umumiy progress", fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Row(verticalAlignment = Alignment.Baseline, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text("$essLearned", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
                                         color = Color(0xFFF9AA33))
                                     Text("/$essTotal", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -326,38 +327,6 @@ fun LearnBrowseScreen(
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
-        }
-    }
-}
-
-@Composable
-fun SearchSectionHeader(title: String, count: Int, color: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, color = color)
-        Surface(shape = RoundedCornerShape(99.dp), color = color.copy(0.15f)) {
-            Text("$count", Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = color)
-        }
-    }
-}
-
-@Composable
-fun SearchResultCard(primary: String, secondary: String, badge: String?, accentColor: Color) {
-    LCard {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.width(4.dp).height(36.dp).clip(RoundedCornerShape(2.dp)).background(accentColor))
-            Column(Modifier.weight(1f)) {
-                Text(primary, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-                Text(secondary, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (badge != null) {
-                Text(badge, fontSize = 10.sp, color = accentColor, fontWeight = FontWeight.Medium)
-            }
         }
     }
 }

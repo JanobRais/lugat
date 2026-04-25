@@ -350,7 +350,7 @@ fun DailyGoalCard(
                 Column(Modifier.weight(1f)) {
                     Text("Kunlik maqsad", fontSize = 13.sp, color = Color.White.copy(0.8f), fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.Baseline) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("$done", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         Text("/$goal", fontSize = 16.sp, color = Color.White.copy(0.7f), fontWeight = FontWeight.Medium)
                     }
