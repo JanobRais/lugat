@@ -128,4 +128,20 @@ class LugatViewModel @Inject constructor(
     
     suspend fun getWordStats() = repository.getWordStats()
     suspend fun getEssentialStats() = repository.getEssentialStats()
+
+    // NEW — Word of Day, Weekly Activity, Accuracy, Today Count
+    suspend fun getWordOfDay(): Word? = repository.getWordOfDay()
+
+    fun getWeeklyActivity(): List<Boolean> = repository.getWeeklyActivity()
+
+    fun getAccuracyPercent(): Int = repository.accuracyPercent
+
+    fun getTodayLearnedCount(): Int = repository.todayLearnedCount
+
+    fun recordAnswer(correct: Boolean) = repository.recordAnswer(correct)
+
+    fun markTodayActive() {
+        repository.markTodayActive()
+        markSessionCompleted()
+    }
 }

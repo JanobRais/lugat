@@ -3,21 +3,12 @@ package com.lugat.app.ui.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,471 +17,481 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lugat.app.data.entity.Word
 import com.lugat.app.ui.LugatViewModel
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import kotlin.math.min
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ── Days of week labels ──────────────────────────────────────────────────
+private val WEEK_DAYS = listOf("Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya")
+
 @Composable
 fun HomeScreen(
     viewModel: LugatViewModel,
-    onNavigateToLearn: () -> Unit,
-    onNavigateToTest: () -> Unit,
-    onNavigateToMistakes: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToSearch: () -> Unit,
-    onNavigateToStats: () -> Unit
+    onNavigateLearn: () -> Unit,
+    onNavigateFlashcard: () -> Unit,
+    onNavigateTest: () -> Unit,
 ) {
+    val isDbInit by viewModel.isDbInitialized.collectAsState()
     val settings by viewModel.dailySettings.collectAsState()
-    val activeDictionary by viewModel.activeDictionary.collectAsState()
+    val dailyGoal = settings.first
 
-    var wordStats by remember { mutableStateOf<Map<String, Int>?>(null) }
-    var essentialStats by remember { mutableStateOf<Map<String, Int>?>(null) }
+    var todayDone by remember { mutableIntStateOf(0) }
+    var weeklyActivity by remember { mutableStateOf(List(7) { false }) }
+    var wordOfDay by remember { mutableStateOf<Word?>(null) }
+    var triLearned by remember { mutableIntStateOf(0) }
+    var triTotal by remember { mutableIntStateOf(2000) }
+    var essLearned by remember { mutableIntStateOf(0) }
+    var essTotal by remember { mutableIntStateOf(4000) }
 
-    LaunchedEffect(Unit) {
-        wordStats = viewModel.getWordStats()
-        essentialStats = viewModel.getEssentialStats()
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Lugat",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 22.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                },
-                actions = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        IconButton(onClick = onNavigateToSearch) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        IconButton(onClick = onNavigateToStats) {
-                            Icon(
-                                Icons.Default.BarChart,
-                                contentDescription = "Stats",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        // Streak Chip
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colors = listOf(Color(0xFFFF6B35), Color(0xFFFFA500))
-                                    )
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.LocalFireDepartment,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(2.dp))
-                                Text(
-                                    "${viewModel.streakCount}",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                        Spacer(Modifier.width(4.dp))
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Daily Progress Widget
-            DailyProgressWidget(
-                trilingualProgress = wordStats?.let { (it["learned"] ?: 0).toFloat() / (it["total"] ?: 1).coerceAtLeast(1) } ?: 0f,
-                essentialProgress = essentialStats?.let { (it["learned"] ?: 0).toFloat() / (it["total"] ?: 1).coerceAtLeast(1) } ?: 0f,
-                trilingualCount = "${wordStats?.get("learned") ?: 0}/${wordStats?.get("total") ?: 0}",
-                essentialCount = "${essentialStats?.get("learned") ?: 0}/${essentialStats?.get("total") ?: 0}"
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Dictionary Switcher
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                val options = listOf("Trilingual 2000", "Essential 4000")
-                val selectedIndex = if (activeDictionary == "essential_4000") 1 else 0
-
-                options.forEachIndexed { index, title ->
-                    SegmentedButton(
-                        selected = selectedIndex == index,
-                        onClick = {
-                            viewModel.switchDictionary(if (index == 0) "trilingual_2000" else "essential_4000")
-                        },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
-                    ) {
-                        Text(text = title, fontSize = 13.sp)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            if (activeDictionary == "essential_4000") {
-                Text(
-                    text = "Essential 4000",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(bottom = 16.dp)
-                )
-
-                GradientActionCard(
-                    title = "Birliklarni o'rganish",
-                    subtitle = "Barcha kitoblar va unitlar",
-                    icon = Icons.Default.MenuBook,
-                    gradientColors = listOf(Color(0xFF2563EB), Color(0xFF1D4ED8)),
-                    onClick = onNavigateToLearn
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(Modifier.fillMaxWidth()) {
-                    SmallGradientCard(
-                        title = "Kunlik Test",
-                        subtitle = "Yangi so'zlar",
-                        icon = Icons.Default.Quiz,
-                        gradientColors = listOf(Color(0xFF7C3AED), Color(0xFF5B21B6)),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 6.dp),
-                        onClick = onNavigateToTest
-                    )
-                    SmallGradientCard(
-                        title = "Xatolar",
-                        subtitle = "Mashq qil",
-                        icon = Icons.Default.ErrorOutline,
-                        gradientColors = listOf(Color(0xFFDC2626), Color(0xFFB91C1C)),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 6.dp),
-                        onClick = onNavigateToMistakes
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth()) {
-                    SmallGradientCard(
-                        title = "Ko'rib chiqish",
-                        subtitle = "O'rganilganlar",
-                        icon = Icons.Default.PlayArrow,
-                        gradientColors = listOf(Color(0xFF059669), Color(0xFF047857)),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 6.dp),
-                        onClick = onNavigateToTest
-                    )
-                    SmallGradientCard(
-                        title = "Aralash",
-                        subtitle = "Barcha rejim",
-                        icon = Icons.Default.Shuffle,
-                        gradientColors = listOf(Color(0xFFD97706), Color(0xFFB45309)),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 6.dp),
-                        onClick = onNavigateToTest
-                    )
-                }
-            } else {
-                Text(
-                    text = "Trilingual 2000",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .align(Alignment.Start)
-                        .padding(bottom = 16.dp)
-                )
-
-                GradientActionCard(
-                    title = "Yangi so'zlar o'rganish",
-                    subtitle = "Bugun: ${settings.first} so'z",
-                    icon = Icons.Default.MenuBook,
-                    gradientColors = listOf(Color(0xFF2563EB), Color(0xFF1D4ED8)),
-                    onClick = onNavigateToLearn
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                GradientActionCard(
-                    title = "Kunlik Test",
-                    subtitle = "Bilimingizni tekshiring",
-                    icon = Icons.Default.Quiz,
-                    gradientColors = listOf(Color(0xFF7C3AED), Color(0xFF5B21B6)),
-                    onClick = onNavigateToTest
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                GradientActionCard(
-                    title = "Xatolarni ko'rib chiqish",
-                    subtitle = "Noto'g'ri so'zlarni mashq qiling",
-                    icon = Icons.Default.ErrorOutline,
-                    gradientColors = listOf(Color(0xFFDC2626), Color(0xFFB91C1C)),
-                    onClick = onNavigateToMistakes
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
+    LaunchedEffect(isDbInit) {
+        if (isDbInit) {
+            todayDone = viewModel.getTodayLearnedCount()
+            weeklyActivity = viewModel.getWeeklyActivity()
+            wordOfDay = viewModel.getWordOfDay()
+            val tStats = viewModel.getWordStats()
+            triLearned = tStats["learned"] ?: 0
+            triTotal = tStats["total"] ?: 2000
+            val eStats = viewModel.getEssentialStats()
+            essLearned = eStats["learned"] ?: 0
+            essTotal = eStats["total"] ?: 4000
         }
     }
-}
 
-@Composable
-fun DailyProgressWidget(
-    trilingualProgress: Float,
-    essentialProgress: Float,
-    trilingualCount: String,
-    essentialCount: String
-) {
-    val animatedTrilingual by animateFloatAsState(
-        targetValue = trilingualProgress,
-        animationSpec = tween(durationMillis = 800)
-    )
-    val animatedEssential by animateFloatAsState(
-        targetValue = essentialProgress,
-        animationSpec = tween(durationMillis = 900)
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(0.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState()),
     ) {
-        Column(Modifier.padding(20.dp)) {
-            Text(
-                "Kunlik Progress",
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            ProgressRow(
-                label = "Trilingual 2000",
-                progress = animatedTrilingual,
-                count = trilingualCount,
-                color = Color(0xFF2563EB)
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            ProgressRow(
-                label = "Essential 4000",
-                progress = animatedEssential,
-                count = essentialCount,
-                color = Color(0xFF16A34A)
-            )
-        }
-    }
-}
-
-@Composable
-fun ProgressRow(label: String, progress: Float, count: String, color: Color) {
-    Column {
+        // ── Header ──────────────────────────────────────────────────────
         Row(
-            Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp, start = 20.dp, end = 20.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Text(
-                count,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+            Column {
+                Text(
+                    "Salom,",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "O'quvchi 👋",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Streak badge
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(Color(0xFFFFF3EE))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("🔥", fontSize = 18.sp)
+                    Text(
+                        "${viewModel.streakCount}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFF4511E)
+                    )
+                }
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "O",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        LinearProgressIndicator(
-            progress = { progress },
+
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color = color,
-            trackColor = color.copy(alpha = 0.15f),
-            strokeCap = StrokeCap.Round
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // ── Daily Goal Card ──────────────────────────────────────────
+            DailyGoalCard(
+                done = todayDone,
+                goal = dailyGoal,
+                onFlashcard = onNavigateFlashcard,
+                onTest = onNavigateTest
+            )
+
+            // ── Weekly Streak ────────────────────────────────────────────
+            LCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "🔥 ${viewModel.streakCount} kunlik seriya!",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "Bu hafta",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    weeklyActivity.forEachIndexed { i, done ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (done) Color(0xFFF4511E)
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    if (done) "🔥" else "·",
+                                    fontSize = if (done) 18.sp else 13.sp,
+                                    color = if (!done) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified
+                                )
+                            }
+                            Text(
+                                WEEK_DAYS[i],
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (done) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Continue Learning ────────────────────────────────────────
+            Text(
+                "Davom eting",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+
+            // Trilingual card
+            LCard(onClick = onNavigateLearn) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) { Text("🇷🇺", fontSize = 26.sp) }
+                    Column(Modifier.weight(1f)) {
+                        Text("Trilingual 2000", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface)
+                        Text("$triLearned/$triTotal so'z", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp))
+                        ThinProgressBar(triLearned.toFloat(), triTotal.toFloat(), MaterialTheme.colorScheme.primary)
+                    }
+                    Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // Essential card
+            LCard(onClick = onNavigateLearn) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFFFFF3E0)),
+                        contentAlignment = Alignment.Center
+                    ) { Text("🇬🇧", fontSize = 26.sp) }
+                    Column(Modifier.weight(1f)) {
+                        Text("Essential 4000", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface)
+                        Text("$essLearned/$essTotal so'z", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp))
+                        ThinProgressBar(essLearned.toFloat(), essTotal.toFloat(), Color(0xFFF9AA33))
+                    }
+                    Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // ── Word of the Day ──────────────────────────────────────────
+            wordOfDay?.let { word ->
+                Text(
+                    "Kunning so'zi",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                LCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column {
+                            Text(
+                                word.ru,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                            Text(
+                                "${word.uz} · ${word.en}",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                "so'z · word",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(99.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "Yangi",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+// ── Daily Goal Card with circular progress ────────────────────────────────
+@Composable
+fun DailyGoalCard(
+    done: Int, goal: Int,
+    onFlashcard: () -> Unit, onTest: () -> Unit
+) {
+    val pct = if (goal > 0) done.toFloat() / goal else 0f
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color(0xFF006A60), Color(0xFF00897B))
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Kunlik maqsad", fontSize = 13.sp, color = Color.White.copy(0.8f), fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.Baseline) {
+                        Text("$done", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                        Text("/$goal", fontSize = 16.sp, color = Color.White.copy(0.7f), fontWeight = FontWeight.Medium)
+                    }
+                    Text("so'z o'rganildi", fontSize = 13.sp, color = Color.White.copy(0.75f))
+                    Spacer(Modifier.height(12.dp))
+                    // Linear progress
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.White.copy(0.25f))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(pct.coerceIn(0f, 1f))
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                // Circular progress
+                Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
+                    CircleProgressCanvas(pct, 80.dp, 7.dp)
+                    Text(
+                        "${(pct * 100).toInt()}%",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
+                }
+            }
+
+            // Bottom buttons
+            Column {
+                Spacer(Modifier.height(130.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LBtn(
+                        label = "🃏 Kartalar",
+                        modifier = Modifier.weight(1f),
+                        onClick = onFlashcard
+                    )
+                    LBtn(
+                        label = "✏️ Test",
+                        modifier = Modifier.weight(1f),
+                        onClick = onTest
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CircleProgressCanvas(progress: Float, size: Dp, strokeWidth: Dp) {
+    val animProg by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = tween(900)
+    )
+    Canvas(Modifier.size(size)) {
+        val s = min(this.size.width, this.size.height)
+        val sw = strokeWidth.toPx()
+        val r = (s - sw) / 2
+        val topLeft = Offset((s - r * 2) / 2f, (s - r * 2) / 2f)
+        val sz = Size(r * 2, r * 2)
+        // Track
+        drawArc(
+            color = Color.White.copy(alpha = 0.25f),
+            startAngle = -90f, sweepAngle = 360f,
+            useCenter = false, topLeft = topLeft, size = sz,
+            style = Stroke(width = sw, cap = StrokeCap.Round)
+        )
+        // Progress
+        drawArc(
+            color = Color.White.copy(alpha = 0.9f),
+            startAngle = -90f, sweepAngle = 360f * animProg,
+            useCenter = false, topLeft = topLeft, size = sz,
+            style = Stroke(width = sw, cap = StrokeCap.Round)
         )
     }
 }
 
 @Composable
-fun GradientActionCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    gradientColors: List<Color>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+fun ThinProgressBar(value: Float, total: Float, color: Color, height: Dp = 6.dp) {
+    val pct = if (total > 0f) (value / total).coerceIn(0f, 1f) else 0f
+    val animPct by animateFloatAsState(targetValue = pct, animationSpec = tween(800))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2))
+            .background(color.copy(alpha = 0.18f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(animPct)
+                .height(height)
+                .clip(RoundedCornerShape(height / 2))
+                .background(color)
+        )
+    }
+}
+
+@Composable
+fun LCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(0.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.horizontalGradient(gradientColors))
-                .padding(horizontal = 20.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.75f)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-                }
-            }
-        }
+        Column(Modifier.padding(16.dp), content = content)
     }
 }
 
 @Composable
-fun SmallGradientCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    gradientColors: List<Color>,
+fun LBtn(
+    label: String,
     modifier: Modifier = Modifier,
+    color: Color = Color.White.copy(0.18f),
+    textColor: Color = Color.White,
     onClick: () -> Unit
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.height(90.dp),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(0.dp)
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(99.dp))
+            .background(color)
+            .clickable { onClick() }
+            .padding(vertical = 10.dp, horizontal = 12.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(gradientColors))
-                .padding(14.dp),
-        ) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.8f),
-                    modifier = Modifier.size(20.dp)
-                )
-                Column {
-                    Text(
-                        text = title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = subtitle,
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-// Legacy kept for compatibility (not used)
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ActionCard(title: String, subtitle: String, onClick: () -> Unit) {
-    GradientActionCard(
-        title = title,
-        subtitle = subtitle,
-        icon = Icons.Default.PlayArrow,
-        gradientColors = listOf(Color(0xFF2563EB), Color(0xFF1D4ED8)),
-        onClick = onClick
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SmallActionCard(title: String, subtitle: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.height(80.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(text = subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textColor)
     }
 }

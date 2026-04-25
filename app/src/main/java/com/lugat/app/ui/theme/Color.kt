@@ -2,43 +2,44 @@ package com.lugat.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Blue Palette
-val PrimaryBlue = Color(0xFF2563EB)
-val PrimaryBlueDark = Color(0xFF1D4ED8)
-val SecondaryBlue = Color(0xFF60A5FA)
-val LightBlue = Color(0xFFEFF6FF)
+// ── Primary Teal Palette (matching JSX C.primary = #006a60) ──────────────
+val PrimaryTeal        = Color(0xFF006A60)
+val PrimaryTealDark    = Color(0xFF004D45)
+val PrimaryTealLight   = Color(0xFF83D5C6)  // primaryContainer
+val OnPrimaryTeal      = Color(0xFFFFFFFF)
+val OnPrimaryContainer = Color(0xFF00201C)
 
-// Gradient Colors
-val GradientStart = Color(0xFF2563EB)
-val GradientMid = Color(0xFF3B82F6)
-val GradientEnd = Color(0xFF1D4ED8)
+// ── Secondary ────────────────────────────────────────────────────────────
+val SecondaryTeal      = Color(0xFF4A6360)
+val SecondaryContainer = Color(0xFFCCE8E3)
+val OnSecondaryContainer = Color(0xFF041F1D)
 
-// Surface Colors Light
-val BackgroundLight = Color(0xFFF1F5F9)
-val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceVariantLight = Color(0xFFEFF6FF)
-val CardBlueLight = Color(0xFFDBEAFE)
+// ── Surface / Background (Light) ─────────────────────────────────────────
+val BackgroundLight    = Color(0xFFF4FBF8)
+val SurfaceLight       = Color(0xFFFFFFFF)
+val Surface1Light      = Color(0xFFE8F5F1)
+val Surface2Light      = Color(0xFFDDF0EB)
+val OutlineLight       = Color(0xFF6F7976)
+val OutlineVariant     = Color(0xFFBEC9C5)
 
-// Surface Colors Dark
-val BackgroundDark = Color(0xFF0A1628)
-val SurfaceDark = Color(0xFF111D35)
-val SurfaceVariantDark = Color(0xFF1A2744)
-val CardBlueDark = Color(0xFF1E3A5F)
+// ── Surface / Background (Dark) ──────────────────────────────────────────
+val BackgroundDark     = Color(0xFF0A1C1A)
+val SurfaceDark        = Color(0xFF191C1B)
+val Surface1Dark       = Color(0xFF1F2B29)
+val OnSurfaceDark      = Color(0xFFE0E3E1)
+val OnSurfaceVariantDark = Color(0xFFBFC9C6)
 
-// Text Colors
-val TextDark = Color(0xFF0F172A)
-val TextSecondary = Color(0xFF475569)
-val TextLight = Color(0xFFF8FAFC)
-val TextSecondaryLight = Color(0xFF94A3B8)
+// ── Text Colors ───────────────────────────────────────────────────────────
+val TextDark           = Color(0xFF161D1B)
+val TextSecondary      = Color(0xFF3F4946)
+val TextLight          = Color(0xFFE0E3E1)
+val TextSecondaryLight = Color(0xFFBFC9C6)
 
-// Status Colors
-val ErrorRed = Color(0xFFEF4444)
-val ErrorContainer = Color(0xFFFFEDED)
-val SuccessGreen = Color(0xFF22C55E)
-val SuccessContainer = Color(0xFFDCFCE7)
-val WarningOrange = Color(0xFFF97316)
-val StreakOrange = Color(0xFFFF6B35)
-
-// Gradient Card Colors
-val EssentialGreen = Color(0xFF16A34A)
-val EssentialGreenLight = Color(0xFFDCFCE7)
+// ── Status Colors ─────────────────────────────────────────────────────────
+val ErrorRed           = Color(0xFFBA1A1A)
+val ErrorContainer     = Color(0xFFFFDAD6)
+val CorrectGreen       = Color(0xFF1B7F5A)
+val CorrectBg          = Color(0xFFD4F7EA)
+val WrongBg            = Color(0xFFFFDAD6)
+val StreakOrange       = Color(0xFFF4511E)
+val GoldYellow         = Color(0xFFF9AA33)

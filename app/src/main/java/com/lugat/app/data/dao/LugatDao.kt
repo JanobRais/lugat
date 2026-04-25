@@ -83,6 +83,9 @@ interface LugatDao {
     """)
     suspend fun searchWords(query: String): List<Word>
 
+    @Query("SELECT * FROM words WHERE id = :id LIMIT 1")
+    suspend fun getWordById(id: Int): Word?
+
     // ----------------------------------------------------
     // ESSENTIAL 4000
     // ----------------------------------------------------

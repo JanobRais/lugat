@@ -1,27 +1,23 @@
 package com.lugat.app.ui.screens
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import android.speech.tts.TextToSpeech
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,11 +25,8 @@ import androidx.compose.ui.unit.sp
 import com.lugat.app.data.entity.EssentialWord
 import com.lugat.app.ui.LugatViewModel
 import kotlinx.coroutines.launch
-import android.speech.tts.TextToSpeech
-import androidx.compose.ui.platform.LocalContext
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FlashcardScreen(
     viewModel: LugatViewModel,
@@ -45,303 +38,260 @@ fun FlashcardScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var words by remember { mutableStateOf<List<EssentialWord>>(emptyList()) }
+    var currentIdx by remember { mutableIntStateOf(0) }
+    var flipped by remember { mutableStateOf(false) }
+    var knownIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var isLoading by remember { mutableStateOf(true) }
-    val isDbInitialized by viewModel.isDbInitialized.collectAsState()
+    var isDone by remember { mutableStateOf(false) }
+    val isDbInit by viewModel.isDbInitialized.collectAsState()
 
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-
     DisposableEffect(Unit) {
-        var ttsInstance: TextToSpeech? = null
-        ttsInstance = TextToSpeech(context) { status ->
+        var ttsObj: TextToSpeech? = null
+        ttsObj = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val ttsRef = ttsInstance ?: return@TextToSpeech
-                val result = ttsRef.setLanguage(Locale.US)
-                if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
-                    try {
-                        val voices = ttsRef.voices
-                        if (voices != null) {
-                            val femaleVoice = voices.find {
-                                it.name.lowercase().contains("female") ||
-                                it.name.lowercase().contains("network-f")
-                            }
-                            if (femaleVoice != null) ttsRef.voice = femaleVoice
-                        }
-                    } catch (e: Exception) { e.printStackTrace() }
-                    ttsRef.setPitch(1.1f)
-                    ttsRef.setSpeechRate(0.9f)
+                val t = ttsObj ?: return@TextToSpeech
+                if (t.setLanguage(Locale.US) >= TextToSpeech.LANG_AVAILABLE) {
+                    t.setPitch(1.1f); t.setSpeechRate(0.9f)
                 }
             }
         }
-        tts = ttsInstance
-        onDispose {
-            ttsInstance?.stop()
-            ttsInstance?.shutdown()
-        }
+        tts = ttsObj
+        onDispose { ttsObj?.stop(); ttsObj?.shutdown() }
     }
 
-    LaunchedEffect(isDbInitialized) {
-        if (isDbInitialized) {
+    LaunchedEffect(isDbInit) {
+        if (isDbInit) {
             words = viewModel.getEssentialWordsForUnit(book, unit)
             isLoading = false
         }
     }
 
-    val pagerState = rememberPagerState(pageCount = { if (words.isEmpty()) 0 else words.size + 1 })
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        }
+        return
+    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            book,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            unit,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+    // ── Done Screen ───────────────────────────────────────────────────────
+    if (isDone || words.isEmpty()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text("🎉", fontSize = 64.sp)
+                Text("Mashq tugadi!", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "${knownIds.size} so'z bilasiz, ${words.size - knownIds.size} qayta o'rganasiz",
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        when {
-            isLoading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF2563EB))
+                // Score card
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                    Row(Modifier.fillMaxWidth().padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceAround) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${knownIds.size}", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF1B7F5A))
+                            Text("Bilaman ✓", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${words.size - knownIds.size}", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFF4511E))
+                            Text("Qayta", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            viewModel.markEssentialWordsAsLearned(words)
+                            viewModel.markTodayActive()
+                            onComplete()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(99.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) { Text("Saqlash va Chiqish ✓", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary) }
+                OutlinedButton(
+                    onClick = { currentIdx = 0; flipped = false; knownIds = emptySet(); isDone = false },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(99.dp)
+                ) { Text("Qayta boshlash") }
             }
-            words.isEmpty() -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("So'z topilmadi.")
-                }
+        }
+        return
+    }
+
+    val word = words[currentIdx]
+
+    // ── Main Card Screen ──────────────────────────────────────────────────
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Header
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.Close, null, tint = MaterialTheme.colorScheme.onSurface)
             }
-            else -> {
+            Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                Text("Flesh-kartalar", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface)
+                Text("$book · $unit", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("${currentIdx + 1}/${words.size}", fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        // Progress
+        ThinProgressBar(
+            currentIdx.toFloat(), words.size.toFloat(),
+            MaterialTheme.colorScheme.primary, 4.dp
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        // Card (tap to flip)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .clickable { flipped = !flipped }
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (flipped) MaterialTheme.colorScheme.primaryContainer
+                                     else MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(2.dp)
+            ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Progress indicator
-                    if (pagerState.currentPage < words.size) {
-                        Spacer(Modifier.height(8.dp))
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                        ) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    "${pagerState.currentPage + 1} / ${words.size}",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    "${((pagerState.currentPage + 1) * 100 / words.size)}%",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2563EB)
-                                )
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    content = {
+                        Spacer(Modifier.height(20.dp))
+                        if (!flipped) {
+                            Text("Inglizcha", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.outline, letterSpacing = 1.2.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(word.en, fontSize = 44.sp, fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.height(20.dp))
+                            Text("Ko'rish uchun bosing", fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            Text("Tarjimalar", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Inglizcha: ${word.en}", fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.outline, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("🇺🇿", fontSize = 18.sp)
+                                Text(word.uz, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary)
                             }
                             Spacer(Modifier.height(6.dp))
-                            LinearProgressIndicator(
-                                progress = { (pagerState.currentPage + 1).toFloat() / words.size },
+                            // TTS
+                            IconButton(
+                                onClick = { tts?.speak(word.en, TextToSpeech.QUEUE_FLUSH, null, null) },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = Color(0xFF2563EB),
-                                trackColor = Color(0xFF2563EB).copy(alpha = 0.15f),
-                            )
-                        }
-                    }
-
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-                        pageSpacing = 12.dp
-                    ) { page ->
-                        if (page < words.size) {
-                            WordCard(words[page], tts)
-                        } else {
-                            CompletionCard(onComplete = {
-                                scope.launch {
-                                    viewModel.markEssentialWordsAsLearned(words)
-                                    viewModel.markSessionCompleted()
-                                    onComplete()
-                                }
-                            })
-                        }
-                    }
-
-                    // Bottom Navigation
-                    if (pagerState.currentPage < words.size) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                    }
-                                },
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                                modifier = Modifier.height(48.dp).width(140.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(0.1f))
+                                    .size(40.dp)
                             ) {
-                                Text(
-                                    "Keyingisi →",
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
-                                )
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, null,
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             }
                         }
+                        Spacer(Modifier.height(20.dp))
                     }
-                }
+                )
             }
         }
-    }
-}
 
-@Composable
-fun WordCard(word: EssentialWord, tts: TextToSpeech?) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(32.dp),
-            elevation = CardDefaults.cardElevation(0.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF2563EB), Color(0xFF1D4ED8))
-                        )
-                    )
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
+        if (!flipped) {
+            Text(
+                "👆 Ko'rish uchun bosing",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        // Action buttons (Bilmadim / Bilaman)
+        if (flipped) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                Button(
+                    onClick = {
+                        // Don't know — don't add to knownIds
+                        flipped = false
+                        if (currentIdx < words.size - 1) currentIdx++
+                        else isDone = true
+                    },
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(99.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFDAD6))
                 ) {
-                    // TTS Button
-                    Box(
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(onClick = {
-                            tts?.speak(word.en, TextToSpeech.QUEUE_FLUSH, null, null)
-                        }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = "Speak",
-                                modifier = Modifier.size(28.dp),
-                                tint = Color.White
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    // English Word
-                    Text(
-                        text = word.en,
-                        fontSize = 44.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center,
-                        color = Color.White
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 24.dp),
-                        color = Color.White.copy(alpha = 0.25f)
-                    )
-
-                    // Uzbek Translation
-                    Text(
-                        text = word.uz,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
+                    Text("😕 Bilmadim", fontWeight = FontWeight.ExtraBold, color = Color(0xFFBA1A1A))
+                }
+                Button(
+                    onClick = {
+                        knownIds = knownIds + word.id
+                        flipped = false
+                        if (currentIdx < words.size - 1) currentIdx++
+                        else isDone = true
+                    },
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape = RoundedCornerShape(99.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4F7EA))
+                ) {
+                    Text("✅ Bilaman", fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B7F5A))
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun CompletionCard(onComplete: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
-        ) {
-            Text("🎉", fontSize = 80.sp)
-            Spacer(modifier = Modifier.height(20.dp))
+        } else {
             Text(
-                "Birlik Tugallandi!",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Bu birliqdagi barcha so'zlarni ko'rdingiz.",
-                style = MaterialTheme.typography.bodyLarge,
+                "${knownIds.size} ta so'z bilasiz",
+                fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(40.dp))
-            Button(
-                onClick = onComplete,
-                modifier = Modifier
-                    .height(56.dp)
-                    .fillMaxWidth(0.7f),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-            ) {
-                Text("Saqlash va Chiqish ✓", fontWeight = FontWeight.Bold, color = Color.White)
-            }
         }
     }
 }

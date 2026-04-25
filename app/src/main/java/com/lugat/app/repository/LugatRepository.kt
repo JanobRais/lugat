@@ -51,6 +51,66 @@ class LugatRepository(
         get() = sharedPreferences.getInt("streak_count", 0)
         set(value) = sharedPreferences.edit().putInt("streak_count", value).apply()
 
+    // ── Accuracy tracking ─────────────────────────────────────────────────
+    var totalAnswered: Int
+        get() = sharedPreferences.getInt("total_answered", 0)
+        set(value) = sharedPreferences.edit().putInt("total_answered", value).apply()
+
+    var totalCorrect: Int
+        get() = sharedPreferences.getInt("total_correct", 0)
+        set(value) = sharedPreferences.edit().putInt("total_correct", value).apply()
+
+    val accuracyPercent: Int
+        get() = if (totalAnswered == 0) 0 else (totalCorrect * 100 / totalAnswered)
+
+    fun recordAnswer(correct: Boolean) {
+        totalAnswered += 1
+        if (correct) totalCorrect += 1
+    }
+
+    // ── Today's learned words count ───────────────────────────────────────
+    var todayLearnedCount: Int
+        get() {
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val saved = sharedPreferences.getString("today_learned_date", "") ?: ""
+            return if (saved == today) sharedPreferences.getInt("today_learned_count", 0) else 0
+        }
+        set(value) {
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            sharedPreferences.edit()
+                .putString("today_learned_date", today)
+                .putInt("today_learned_count", value)
+                .apply()
+        }
+
+    fun incrementTodayLearned(count: Int) {
+        todayLearnedCount = todayLearnedCount + count
+    }
+
+    // ── Weekly activity (last 7 days) ─────────────────────────────────────
+    fun getWeeklyActivity(): List<Boolean> {
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        val cal = java.util.Calendar.getInstance()
+        val activeDates = sharedPreferences.getStringSet("active_dates", emptySet()) ?: emptySet()
+        return (6 downTo 0).map { daysAgo ->
+            cal.time = java.util.Date()
+            cal.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+            sdf.format(cal.time) in activeDates
+        }
+    }
+
+    fun markTodayActive() {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val dates = (sharedPreferences.getStringSet("active_dates", emptySet()) ?: emptySet()).toMutableSet()
+        dates.add(today)
+        // Keep only last 30 days
+        if (dates.size > 30) {
+            val sorted = dates.sorted()
+            dates.removeAll(sorted.take(dates.size - 30).toSet())
+        }
+        sharedPreferences.edit().putStringSet("active_dates", dates).apply()
+    }
+
     suspend fun checkAndPopulateDatabase() = withContext(Dispatchers.IO) {
         if (dao.getWordCount() == 0) {
             val words = mutableListOf<Word>()
@@ -133,6 +193,15 @@ class LugatRepository(
         val time = System.currentTimeMillis()
         val progresses = words.map { Progress(it.id, true, time) }
         dao.insertProgress(progresses)
+        incrementTodayLearned(words.size)
+    }
+
+    // ── Word of the Day ───────────────────────────────────────────────────
+    suspend fun getWordOfDay(): Word? = withContext(Dispatchers.IO) {
+        val count = dao.getWordCount()
+        if (count == 0) return@withContext null
+        val dayIndex = (java.util.Date().time / 86400000L % count).toInt() + 1
+        dao.getWordById(dayIndex)
     }
 
     suspend fun reportMistake(wordId: Int) = withContext(Dispatchers.IO) {
