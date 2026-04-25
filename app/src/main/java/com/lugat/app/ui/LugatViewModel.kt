@@ -31,6 +31,12 @@ class LugatViewModel @Inject constructor(
     private val _activeDictionary = MutableStateFlow(repository.activeDictionaryType)
     val activeDictionary = _activeDictionary.asStateFlow()
 
+    fun setActiveDictionary(type: String) {
+        repository.activeDictionaryType = type
+        _activeDictionary.value = type
+    }
+
+
     private val _selectedBook = MutableStateFlow<String?>(null)
     val selectedBook = _selectedBook.asStateFlow()
 

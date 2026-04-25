@@ -35,7 +35,8 @@ private val WEEK_DAYS = listOf("Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya")
 @Composable
 fun HomeScreen(
     viewModel: LugatViewModel,
-    onNavigateLearn: () -> Unit,
+    onNavigateTrilingual: () -> Unit,
+    onNavigateEssential: () -> Unit,
     onNavigateFlashcard: () -> Unit,
     onNavigateTest: () -> Unit,
 ) {
@@ -212,7 +213,7 @@ fun HomeScreen(
             )
 
             // Trilingual card
-            LCard(onClick = onNavigateLearn) {
+            LCard(onClick = onNavigateTrilingual) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -238,7 +239,7 @@ fun HomeScreen(
             }
 
             // Essential card
-            LCard(onClick = onNavigateLearn) {
+            LCard(onClick = onNavigateEssential) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

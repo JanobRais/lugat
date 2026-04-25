@@ -109,11 +109,13 @@ fun LugatApp() {
                     composable("home") {
                         HomeScreen(
                             viewModel = viewModel,
-                            onNavigateLearn = {
-                                if (activeDictionary == "essential_4000")
-                                    navController.navigate("essential_units")
-                                else
-                                    navController.navigate("learn_session")
+                            onNavigateTrilingual = {
+                                viewModel.setActiveDictionary("lugat_2000")
+                                navController.navigate("learn_session")
+                            },
+                            onNavigateEssential = {
+                                viewModel.setActiveDictionary("essential_4000")
+                                navController.navigate("essential_units")
                             },
                             onNavigateFlashcard = {
                                 if (activeDictionary == "essential_4000")

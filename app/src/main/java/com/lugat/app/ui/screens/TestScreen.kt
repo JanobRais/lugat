@@ -112,10 +112,14 @@ fun TestScreen(
         val excellent = pct >= 80
         Box(
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+
             contentAlignment = Alignment.Center
         ) {
             Column(
-                Modifier.padding(24.dp).fillMaxWidth(),
+                Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
